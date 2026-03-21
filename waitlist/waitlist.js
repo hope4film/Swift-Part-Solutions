@@ -3,9 +3,11 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const { url, anonKey } = window.__SPS_SUPABASE__ || {};
 const supabase = url && anonKey ? createClient(url, anonKey) : null;
 
-const form       = document.getElementById('waitlist-form');
-const submitBtn  = document.getElementById('submit-btn');
-const msgBox     = document.getElementById('form-message');
+const form        = document.getElementById('waitlist-form');
+const formWrap    = document.getElementById('waitlist-form-wrap');
+const successPane = document.getElementById('waitlist-success');
+const submitBtn   = document.getElementById('submit-btn');
+const msgBox      = document.getElementById('form-message');
 
 const REQUIRED_FIELDS = ['first_name', 'last_name', 'email', 'field_type'];
 
@@ -17,6 +19,14 @@ function showMessage(text, isError = false) {
 
 function hideMessage() {
   msgBox.classList.add('hidden');
+}
+
+function showSuccess() {
+  form.reset();
+  formWrap.classList.add('hidden');
+  successPane.classList.remove('hidden');
+  successPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('success-heading')?.focus();
 }
 
 function validateEmail(email) {
@@ -78,14 +88,13 @@ form.addEventListener('submit', async (e) => {
 
     if (error) {
       if (error.code === '23505') {
-        showMessage("That email is already on the waitlist — you're all set!", false);
+        showSuccess();
       } else {
         console.error('Supabase insert error:', error);
         showMessage('Something went wrong. Please try again.', true);
       }
     } else {
-      showMessage("You're on the list! We'll be in touch when SPS is ready.", false);
-      form.reset();
+      showSuccess();
     }
   } catch (err) {
     console.error('Network error:', err);
