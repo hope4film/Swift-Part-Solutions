@@ -82,6 +82,24 @@
         <div id="body-style-grid" class="mt-1 flex flex-wrap gap-2 rounded border border-border p-2"></div>
       </div>
 
+      <!-- Inlet / Outlet sizes -->
+      <div id="inlet-outlet-section" class="hidden">
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="text-sm font-medium text-gray-300">Inlet size</span>
+            <select id="inlet-size" class="mt-1 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
+              <option value="">Select…</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="text-sm font-medium text-gray-300">Outlet size</span>
+            <select id="outlet-size" class="mt-1 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white" disabled>
+              <option value="">Select inlet first</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
       <!-- Cartridge -->
       <div>
         <span class="text-sm font-medium text-gray-300">Cartridge</span>
@@ -99,21 +117,31 @@
 
           <p id="cartridge-family-hint" class="hidden mt-1 text-[10px] text-gray-500"></p>
           <p id="cartridge-no-match" class="hidden mt-1 text-[10px] text-amber-500"></p>
+          <button type="button" id="bp15-toggle" class="hidden mt-1 text-[10px] text-accent hover:underline">+ Show BP15 bypass variants</button>
         </div>
       </div>
 
       <!-- Power element -->
-      <label class="block">
+      <div>
         <span class="text-sm font-medium text-gray-300">Power element</span>
         <select id="power-element" class="mt-1 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
           <option value="">Select…</option>
         </select>
-      </label>
+        <p class="mt-1 text-[10px] text-gray-500">KT47 supersedes KT43 — same charge elements, wider body neck (larger wrench).</p>
+        <button type="button" id="uncommon-power-toggle" class="mt-0.5 text-[10px] text-accent hover:underline">+ Show uncommon sizes (KT33, KT45, KT63, KT85)</button>
+      </div>
 
-      <!-- Part preview -->
-      <div class="pt-2 border-t border-border">
-        <span class="font-semibold text-gray-300">Part preview:</span>
-        <span id="part-preview" class="ml-2 font-mono text-white">—</span>
+      <!-- Resolved Part Numbers -->
+      <div class="mt-3 rounded border border-border bg-[#111113] p-3">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-accent">Resolved Part Numbers</p>
+        <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-sm">
+          <span class="text-gray-500">Body:</span>
+          <span id="resolved-body" class="text-gray-600">—</span>
+          <span class="text-gray-500">Cartridge:</span>
+          <span id="resolved-cartridge" class="text-gray-600">—</span>
+          <span class="text-gray-500">Powerhead:</span>
+          <span id="resolved-powerhead" class="text-gray-600">—</span>
+        </div>
       </div>
 
       <!-- More Specs toggle -->
@@ -123,12 +151,6 @@
           <label class="block">
             <span class="text-sm text-gray-400">Tonnage / capacity</span>
             <select id="tonnage" class="mt-0.5 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
-              <option value="">—</option>
-            </select>
-          </label>
-          <label class="block">
-            <span class="text-sm text-gray-400">Connection size</span>
-            <select id="connection-size" class="mt-0.5 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
               <option value="">—</option>
             </select>
           </label>

@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TxvBuilderBlock, TxvBuilderPrefill } from "../../types";
 
-// --- Data (from legacy HTML) ---
+// ---------------------------------------------------------------------------
+// Temperature & Refrigerant
+// ---------------------------------------------------------------------------
 
 const TEMPERATURE_OPTIONS: { value: string; label: string }[] = [
   { value: "air_conditioning", label: "Air Conditioning" },
@@ -11,7 +13,6 @@ const TEMPERATURE_OPTIONS: { value: string; label: string }[] = [
   { value: "low_temp", label: "Low Temp (0°F to -40°F)" },
 ];
 
-// Charge letter + refrigerant; order and grouping match Sporlan conventions
 const REFRIGERANT_OPTIONS: { charge: string; refrigerant: string; label: string }[] = [
   { charge: "J", refrigerant: "R1234yf", label: "R-1234yf (J)" },
   { charge: "J", refrigerant: "R134a", label: "R-134a (J)" },
@@ -36,33 +37,86 @@ const REFRIGERANT_OPTIONS: { charge: string; refrigerant: string; label: string 
   { charge: "Y", refrigerant: "R454B", label: "R-454B (Y)" },
 ];
 
+const TEMP_PRIORITY_REFRIGERANTS: Record<string, string[]> = {
+  low_temp: ["R404A", "R507A", "R448A", "R449A", "R502", "R402A"],
+  air_conditioning: ["R22", "R410A", "R454B", "R32", "R407C", "R134a"],
+  commercial_refrigeration: [],
+};
+
+// ---------------------------------------------------------------------------
+// Equalizer & Body Styles
+// ---------------------------------------------------------------------------
+
 const BODY_STYLES = ["Q", "QE", "EQ", "EQE", "SQ", "SQE", "BQ", "BQE", "EBQ", "EBQE", "SBQ", "SBQE"];
-
-// External equalized = "E" at end of body style (e.g. EBQE). Internal = no trailing E (e.g. EBQ).
-const EXTERNAL_BODY_STYLES = BODY_STYLES.filter((code) => code.endsWith("E"));
-const INTERNAL_BODY_STYLES = BODY_STYLES.filter((code) => !code.endsWith("E"));
-
-const POWER_ELEMENT_OPTIONS = ["KT43", "KT47", "KT53", "KT83"];
-
-const TONNAGE_OPTIONS = ["0.5", "1", "1.5", "2", "3", "4", "5", "8"];
-
-const CONNECTION_SIZE_OPTIONS = ["1/4", "3/8", "1/2", "5/8"];
+const EXTERNAL_BODY_STYLES = BODY_STYLES.filter((c) => c.endsWith("E"));
+const INTERNAL_BODY_STYLES = BODY_STYLES.filter((c) => !c.endsWith("E"));
 
 const EQUALIZER_OPTIONS: { value: string; label: string }[] = [
   { value: "internal", label: "Internal equalized" },
   { value: "external", label: "External equalized" },
 ];
 
-// Temperature → refrigerants to prioritize first in dropdown
-const TEMP_PRIORITY_REFRIGERANTS: Record<string, string[]> = {
-  low_temp: ["R404A", "R507A", "R448A", "R449A", "R502", "R402A"],
-  air_conditioning: ["R22", "R410A", "R454B", "R32", "R407C", "R134a"],
-  commercial_refrigeration: [], // show all in list order
+// ---------------------------------------------------------------------------
+// Body Part Number Lookup (from Sporlan URI514 catalog)
+// ---------------------------------------------------------------------------
+
+const BODY_PART_NUMBERS: { bodyStyle: string; inlet: string; outlet: string; partNumber: string }[] = [
+  // Q — Flare body, QC cartridge
+  { bodyStyle: "Q", inlet: "1/4", outlet: "3/8", partNumber: "QBODY2X3F" },
+  { bodyStyle: "Q", inlet: "1/4", outlet: "1/2", partNumber: "QBODY2X4F" },
+  { bodyStyle: "Q", inlet: "3/8", outlet: "1/2", partNumber: "QBODY3X4F" },
+  // QE — Flare body, external eq, QC cartridge
+  { bodyStyle: "QE", inlet: "1/4", outlet: "3/8", partNumber: "QEBODY2X3F" },
+  { bodyStyle: "QE", inlet: "1/4", outlet: "1/2", partNumber: "QEBODY2X4F" },
+  { bodyStyle: "QE", inlet: "3/8", outlet: "1/2", partNumber: "QEBODY3X4F" },
+  // BQ — Flare balanced port, BQC cartridge
+  { bodyStyle: "BQ", inlet: "1/4", outlet: "1/2", partNumber: "BQBODY2X4F" },
+  { bodyStyle: "BQ", inlet: "3/8", outlet: "1/2", partNumber: "BQBODY3X4F" },
+  // BQE — Flare balanced port, external eq, BQC cartridge
+  { bodyStyle: "BQE", inlet: "1/4", outlet: "1/2", partNumber: "BQEBODY2X4F" },
+  { bodyStyle: "BQE", inlet: "3/8", outlet: "1/2", partNumber: "BQEBODY3X4F" },
+  // SQ — ODF, QC cartridge
+  { bodyStyle: "SQ", inlet: "3/8", outlet: "1/2", partNumber: "SQBODY3X4" },
+  // SQE — ODF, external eq, QC cartridge
+  { bodyStyle: "SQE", inlet: "1/4", outlet: "1/2", partNumber: "SQEBODY2X4" },
+  { bodyStyle: "SQE", inlet: "3/8", outlet: "1/2", partNumber: "SQEBODY3X4" },
+  // SBQ — ODF balanced port, BQC cartridge
+  { bodyStyle: "SBQ", inlet: "3/8", outlet: "1/2", partNumber: "SBQBODY3X4" },
+  // SBQE — ODF balanced port, external eq, BQC cartridge
+  { bodyStyle: "SBQE", inlet: "3/8", outlet: "1/2", partNumber: "SBQEBODY3X4" },
+  // EQ — ODF extended ends, QC cartridge
+  { bodyStyle: "EQ", inlet: "1/4", outlet: "3/8", partNumber: "EQBODY2X3" },
+  { bodyStyle: "EQ", inlet: "1/4", outlet: "1/2", partNumber: "EQBODY2X4" },
+  { bodyStyle: "EQ", inlet: "3/8", outlet: "1/2", partNumber: "EQBODY3X4S" },
+  { bodyStyle: "EQ", inlet: "3/8", outlet: "5/8", partNumber: "EQBODY3X5S" },
+  { bodyStyle: "EQ", inlet: "1/2", outlet: "5/8", partNumber: "EQBODY4X5S" },
+  // EQE — ODF extended ends, external eq, QC cartridge
+  { bodyStyle: "EQE", inlet: "1/4", outlet: "3/8", partNumber: "EQEBODY2X3" },
+  { bodyStyle: "EQE", inlet: "1/4", outlet: "1/2", partNumber: "EQEBODY2X4" },
+  { bodyStyle: "EQE", inlet: "3/8", outlet: "1/2", partNumber: "EQEBODY3X4S" },
+  { bodyStyle: "EQE", inlet: "3/8", outlet: "5/8", partNumber: "EQEBODY3X5S" },
+  { bodyStyle: "EQE", inlet: "1/2", outlet: "5/8", partNumber: "EQEBODY4X5S" },
+  { bodyStyle: "EQE", inlet: "1/2", outlet: "7/8", partNumber: "EQEBODY4X7S" },
+  // EBQ — ODF extended ends, balanced port, BQC cartridge
+  { bodyStyle: "EBQ", inlet: "1/4", outlet: "3/8", partNumber: "EBQBODY2X3" },
+  { bodyStyle: "EBQ", inlet: "3/8", outlet: "1/2", partNumber: "EBQBODY3X4" },
+  { bodyStyle: "EBQ", inlet: "3/8", outlet: "5/8", partNumber: "EBQBODY3X5S" },
+  { bodyStyle: "EBQ", inlet: "1/2", outlet: "5/8", partNumber: "EBQBODY4X5" },
+  // EBQE — ODF extended ends, balanced port, external eq, BQC cartridge
+  { bodyStyle: "EBQE", inlet: "1/4", outlet: "3/8", partNumber: "EBQEBODY2X3" },
+  { bodyStyle: "EBQE", inlet: "3/8", outlet: "1/2", partNumber: "EBQEBODY3X4" },
+  { bodyStyle: "EBQE", inlet: "1/2", outlet: "5/8", partNumber: "EBQEBODY4X5S" },
+  { bodyStyle: "EBQE", inlet: "1/2", outlet: "7/8", partNumber: "EBQEBODY4X7" },
+];
+
+const FRACTION_SORT: Record<string, number> = {
+  "1/4": 0.25, "3/8": 0.375, "1/2": 0.5, "5/8": 0.625, "7/8": 0.875,
 };
 
-// --- Cartridge data (Sporlan reference: Q vs BQ body style, color code, nominal capacity by refrigerant) ---
+// ---------------------------------------------------------------------------
+// Cartridge Data
+// ---------------------------------------------------------------------------
 
-/** Charge column key for capacity tables. V,D,N,O,T share one column. Z split by R410A vs R32. */
 type ChargeColumn = "J" | "S" | "V_D_N_O_T" | "Z_R410A" | "Z_R32" | "Y";
 
 function getChargeColumn(refrigerant: string, chargeLetter: string): ChargeColumn | "" {
@@ -76,15 +130,15 @@ function getChargeColumn(refrigerant: string, chargeLetter: string): ChargeColum
   return "";
 }
 
-/** Q family: Q, QE, EQ, EQE, SQ, SQE. BQ family: BQ, BQE, EBQ, EBQE, SBQ, SBQE. */
 function getBodyStyleFamily(bodyStyle: string): "Q" | "BQ" | "" {
   if (!bodyStyle) return "";
-  if (bodyStyle === "BQ" || bodyStyle === "BQE" || bodyStyle === "EBQ" || bodyStyle === "EBQE" || bodyStyle === "SBQ" || bodyStyle === "SBQE") return "BQ";
+  if (["BQ", "BQE", "EBQ", "EBQE", "SBQ", "SBQE"].includes(bodyStyle)) return "BQ";
   return "Q";
 }
 
-// Q Cartridge: capacity code 0–6, nominal capacity by J / S / V,D,N,O,T (from Sporlan ref)
-const Q_CARTRIDGES: { code: string; color: string; capacities: Record<ChargeColumn, string> }[] = [
+type CartridgeRow = { code: string; color: string; capacities: Record<ChargeColumn, string> };
+
+const Q_CARTRIDGES: CartridgeRow[] = [
   { code: "0", color: "RED", capacities: { J: "1/8 - 1/6", S: "1/8 - 1/6", V_D_N_O_T: "1/4 - 1/3", Z_R410A: "", Z_R32: "", Y: "" } },
   { code: "1", color: "YELLOW", capacities: { J: "1/4", S: "1/4", V_D_N_O_T: "1/2 - 3/4", Z_R410A: "", Z_R32: "", Y: "" } },
   { code: "2", color: "GREEN", capacities: { J: "1/2", S: "1/2", V_D_N_O_T: "1", Z_R410A: "", Z_R32: "", Y: "" } },
@@ -94,8 +148,7 @@ const Q_CARTRIDGES: { code: string; color: string; capacities: Record<ChargeColu
   { code: "6", color: "WHITE", capacities: { J: "2-1/2 - 3", S: "3", V_D_N_O_T: "4 - 5", Z_R410A: "", Z_R32: "", Y: "" } },
 ];
 
-// BQ Cartridge: capacity code AAA, AA, A, B, C; columns include Z(R410A), Z(R32), Y (from Sporlan ref)
-const BQ_CARTRIDGES: { code: string; color: string; capacities: Record<ChargeColumn, string> }[] = [
+const BQ_CARTRIDGES: CartridgeRow[] = [
   { code: "AAA", color: "RED", capacities: { J: "1/8 - 1/5", S: "1/8 - 1/5", V_D_N_O_T: "1/8 - 1/3", Z_R410A: "1/4 - 1/3", Z_R32: "1/3 - 1/2", Y: "1/3 - 1/2" } },
   { code: "AA", color: "YELLOW", capacities: { J: "1/4 - 1/3", S: "1/4 - 1/3", V_D_N_O_T: "1/2 - 2/3", Z_R410A: "1/2 - 3/4", Z_R32: "3/4 - 1", Y: "3/4 - 1" } },
   { code: "A", color: "BLUE", capacities: { J: "1/2 - 1", S: "1/2 - 1", V_D_N_O_T: "3/4 - 1-1/2", Z_R410A: "1 - 1-3/4", Z_R32: "1-1/2 - 2-1/2", Y: "1-1/2 - 2" } },
@@ -103,7 +156,13 @@ const BQ_CARTRIDGES: { code: string; color: string; capacities: Record<ChargeCol
   { code: "C", color: "WHITE", capacities: { J: "2 - 3", S: "2-1/4 - 3", V_D_N_O_T: "3-1/4 - 5-1/2", Z_R410A: "4 - 6", Z_R32: "5 - 8-1/2", Y: "4-1/2 - 7" } },
 ];
 
-// Color for chip/badge in UI (tailwind-safe)
+const BQ_BP15_CARTRIDGES: CartridgeRow[] = [
+  { code: "AA-BP15", color: "YELLOW", capacities: { J: "1/4 - 1/3", S: "1/4 - 1/3", V_D_N_O_T: "1/2 - 2/3", Z_R410A: "1/2 - 3/4", Z_R32: "3/4 - 1", Y: "3/4 - 1" } },
+  { code: "A-BP15", color: "BLUE", capacities: { J: "1/2 - 1", S: "1/2 - 1", V_D_N_O_T: "3/4 - 1-1/2", Z_R410A: "1 - 1-3/4", Z_R32: "1-1/2 - 2-1/2", Y: "1-1/2 - 2" } },
+  { code: "B-BP15", color: "PINK", capacities: { J: "1-1/4 - 1-3/4", S: "1-1/4 - 2", V_D_N_O_T: "1-3/4 - 3", Z_R410A: "2 - 3-1/2", Z_R32: "3 - 4-1/2", Y: "2-1/2 - 4" } },
+  { code: "C-BP15", color: "WHITE", capacities: { J: "2 - 3", S: "2-1/4 - 3", V_D_N_O_T: "3-1/4 - 5-1/2", Z_R410A: "4 - 6", Z_R32: "5 - 8-1/2", Y: "4-1/2 - 7" } },
+];
+
 const CARTRIDGE_COLOR_CLASS: Record<string, string> = {
   RED: "bg-red-600",
   YELLOW: "bg-yellow-500",
@@ -114,6 +173,69 @@ const CARTRIDGE_COLOR_CLASS: Record<string, string> = {
   WHITE: "bg-gray-200 text-gray-900",
 };
 
+function resolveCartridgePN(family: "Q" | "BQ" | "", code: string): string {
+  if (!family || !code) return "";
+  if (family === "Q") return `QC${code}`;
+  return `BQC${code}`;
+}
+
+// ---------------------------------------------------------------------------
+// Power Element / Powerhead Data
+// ---------------------------------------------------------------------------
+
+const STANDARD_POWER_ELEMENTS = ["KT47", "KT43", "KT53", "KT83"];
+const UNCOMMON_POWER_ELEMENTS = ["KT33", "KT45", "KT63", "KT85"];
+
+/** Suffix appended to the element base by charge group and temperature application. */
+const POWERHEAD_SUFFIXES: Record<string, Partial<Record<string, string>>> = {
+  J:   { air_conditioning: "JCP60",  commercial_refrigeration: "JC",    low_temp: "JZ" },
+  V:   { air_conditioning: "VCP100", commercial_refrigeration: "VC",    low_temp: "VZ" },
+  NGA: { air_conditioning: "NGA" },
+  D:   { commercial_refrigeration: "DC" },
+  S:   { air_conditioning: "SCP115", commercial_refrigeration: "SC/PC", low_temp: "SZ" },
+};
+
+/** R410A requires a heavier-construction element; KT43/KT47→KT45, KT83→KT85. */
+const R410A_BASE_SWAP: Record<string, string> = {
+  KT33: "KT33", KT43: "KT45", KT47: "KT45", KT53: "KT53", KT63: "KT63", KT83: "KT85", KT85: "KT85", KT45: "KT45",
+};
+
+const R410A_SUFFIXES: Partial<Record<string, string>> = {
+  air_conditioning: "ZGA",
+};
+
+function getPowerheadChargeGroup(refrigerant: string, chargeLetter: string): string {
+  if (refrigerant === "R407C") return "NGA";
+  return chargeLetter;
+}
+
+function resolvePowerheadPN(base: string, refrigerant: string, chargeLetter: string, temperature: string): string {
+  if (!base || !chargeLetter || !temperature) return "";
+
+  if (chargeLetter === "Z" && refrigerant === "R410A") {
+    const swapped = R410A_BASE_SWAP[base] ?? base;
+    const suffix = R410A_SUFFIXES[temperature];
+    return suffix ? `${swapped}${suffix}` : "";
+  }
+  if (chargeLetter === "Z") return "";
+
+  const group = getPowerheadChargeGroup(refrigerant, chargeLetter);
+  const suffixes = POWERHEAD_SUFFIXES[group];
+  if (!suffixes) return "";
+  const suffix = suffixes[temperature];
+  return suffix ? `${base}${suffix}` : "";
+}
+
+// ---------------------------------------------------------------------------
+// Tonnage
+// ---------------------------------------------------------------------------
+
+const TONNAGE_OPTIONS = ["0.5", "1", "1.5", "2", "3", "4", "5", "8"];
+
+// ---------------------------------------------------------------------------
+// Payload
+// ---------------------------------------------------------------------------
+
 export interface TxvBuilderPayload {
   builder: "txv";
   temperature?: string;
@@ -123,9 +245,17 @@ export interface TxvBuilderPayload {
   power_element?: string;
   tonnage?: string;
   equalizer?: string;
-  connection_size?: string;
+  inlet_size?: string;
+  outlet_size?: string;
   oem_unit_model?: string;
+  body_part_number?: string;
+  cartridge_part_number?: string;
+  powerhead_part_number?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export default function TXVBuilder({
   block,
@@ -135,22 +265,28 @@ export default function TXVBuilder({
   onSubmit: (payload: TxvBuilderPayload) => void;
 }) {
   const prefill = block.prefill ?? {};
+
   const [temperature, setTemperature] = useState<string>(prefill.temperature ?? "");
   const [refrigerant, setRefrigerant] = useState<string>(prefill.refrigerant ?? "");
   const [bodyStyle, setBodyStyle] = useState<string>(prefill.body_style ?? "");
   const [cartridge, setCartridge] = useState<string>(prefill.cartridge ?? "");
   const [powerElement, setPowerElement] = useState<string>(prefill.power_element ?? "");
   const [equalizer, setEqualizer] = useState<string>(prefill.equalizer ?? "");
+  const [inletSize, setInletSize] = useState<string>(prefill.inlet_size ?? "");
+  const [outletSize, setOutletSize] = useState<string>(prefill.outlet_size ?? "");
   const [tonnage, setTonnage] = useState<string>(prefill.tonnage ?? "");
-  const [connectionSize, setConnectionSize] = useState<string>(prefill.connection_size ?? "");
   const [oemUnitModel, setOemUnitModel] = useState<string>(prefill.oem_unit_model ?? "");
+
   const [showMoreSpecs, setShowMoreSpecs] = useState(false);
+  const [showUncommonPower, setShowUncommonPower] = useState(false);
+  const [showUncommonCartridges, setShowUncommonCartridges] = useState(false);
   const [cartridgeDropdownOpen, setCartridgeDropdownOpen] = useState(false);
   const cartridgeDropdownRef = useRef<HTMLDivElement>(null);
 
+  // --- Derived: charge ---------------------------------------------------
+
   const chargeLetter = useMemo(() => {
-    const opt = REFRIGERANT_OPTIONS.find((o) => o.refrigerant === refrigerant);
-    return opt?.charge ?? "";
+    return REFRIGERANT_OPTIONS.find((o) => o.refrigerant === refrigerant)?.charge ?? "";
   }, [refrigerant]);
 
   const refrigerantOptionsSorted = useMemo(() => {
@@ -163,39 +299,118 @@ export default function TXVBuilder({
   }, [temperature]);
 
   const chargeColumn = useMemo(
-    (): ChargeColumn | "" => getChargeColumn(refrigerant, chargeLetter) as ChargeColumn | "",
+    (): ChargeColumn | "" => getChargeColumn(refrigerant, chargeLetter),
     [refrigerant, chargeLetter],
   );
 
+  // --- Derived: body style ------------------------------------------------
+
   const bodyStyleFamily = useMemo(() => getBodyStyleFamily(bodyStyle), [bodyStyle]);
 
-  // Cartridge options for current body family (Q or BQ) with nominal capacity for selected refrigerant
+  const bodyStylesVisible = useMemo(() => {
+    if (equalizer === "external") return EXTERNAL_BODY_STYLES;
+    if (equalizer === "internal") return INTERNAL_BODY_STYLES;
+    return BODY_STYLES;
+  }, [equalizer]);
+
+  // --- Derived: inlet / outlet sizes for selected body --------------------
+
+  const availableInletSizes = useMemo(() => {
+    if (!bodyStyle) return [] as string[];
+    const sizes = new Set(BODY_PART_NUMBERS.filter((e) => e.bodyStyle === bodyStyle).map((e) => e.inlet));
+    return [...sizes].sort((a, b) => (FRACTION_SORT[a] ?? 0) - (FRACTION_SORT[b] ?? 0));
+  }, [bodyStyle]);
+
+  const availableOutletSizes = useMemo(() => {
+    if (!bodyStyle) return [] as string[];
+    const filtered = BODY_PART_NUMBERS.filter(
+      (e) => e.bodyStyle === bodyStyle && (!inletSize || e.inlet === inletSize),
+    );
+    const sizes = new Set(filtered.map((e) => e.outlet));
+    return [...sizes].sort((a, b) => (FRACTION_SORT[a] ?? 0) - (FRACTION_SORT[b] ?? 0));
+  }, [bodyStyle, inletSize]);
+
+  // --- Resolved body part number ------------------------------------------
+
+  const bodyPartNumber = useMemo(() => {
+    if (!bodyStyle || !inletSize || !outletSize) return "";
+    return (
+      BODY_PART_NUMBERS.find(
+        (e) => e.bodyStyle === bodyStyle && e.inlet === inletSize && e.outlet === outletSize,
+      )?.partNumber ?? ""
+    );
+  }, [bodyStyle, inletSize, outletSize]);
+
+  // --- Cartridge options --------------------------------------------------
+
   const cartridgeOptionsWithCapacity = useMemo(() => {
-    if (bodyStyleFamily === "Q") {
-      return Q_CARTRIDGES.map((c) => ({
-        ...c,
-        nominalCapacity: chargeColumn ? c.capacities[chargeColumn] || "—" : "—",
-      }));
-    }
+    const mapRow = (c: CartridgeRow) => ({
+      ...c,
+      nominalCapacity: chargeColumn ? c.capacities[chargeColumn] || "—" : "—",
+    });
+    if (bodyStyleFamily === "Q") return Q_CARTRIDGES.map(mapRow);
     if (bodyStyleFamily === "BQ") {
-      return BQ_CARTRIDGES.map((c) => ({
-        ...c,
-        nominalCapacity: chargeColumn ? c.capacities[chargeColumn] || "—" : "—",
-      }));
+      const base = BQ_CARTRIDGES.map(mapRow);
+      if (showUncommonCartridges) return [...base, ...BQ_BP15_CARTRIDGES.map(mapRow)];
+      return base;
     }
     return [];
-  }, [bodyStyleFamily, chargeColumn]);
+  }, [bodyStyleFamily, chargeColumn, showUncommonCartridges]);
 
   const cartridgeEnabled = Boolean(chargeLetter && bodyStyle);
 
-  // When body style or refrigerant changes, clear cartridge if it's no longer in the list (e.g. Q "3" → BQ has no "3")
+  const selectedCartridgeOption = useMemo(
+    () => cartridgeOptionsWithCapacity.find((c) => c.code === cartridge),
+    [cartridge, cartridgeOptionsWithCapacity],
+  );
+
+  const cartridgePartNumber = useMemo(
+    () => resolveCartridgePN(bodyStyleFamily, cartridge),
+    [bodyStyleFamily, cartridge],
+  );
+
+  // --- Power element options ----------------------------------------------
+
+  const powerElementOptions = useMemo(() => {
+    return showUncommonPower
+      ? [...STANDARD_POWER_ELEMENTS, ...UNCOMMON_POWER_ELEMENTS]
+      : STANDARD_POWER_ELEMENTS;
+  }, [showUncommonPower]);
+
+  const powerheadPartNumber = useMemo(
+    () => resolvePowerheadPN(powerElement, refrigerant, chargeLetter, temperature),
+    [powerElement, refrigerant, chargeLetter, temperature],
+  );
+
+  // --- Effects: keep selections valid -------------------------------------
+
+  const setEqualizerAndClearBodyIfNeeded = useCallback(
+    (value: string) => {
+      setEqualizer(value);
+      if (value === "external" && bodyStyle && !bodyStyle.endsWith("E")) setBodyStyle("");
+      if (value === "internal" && bodyStyle && bodyStyle.endsWith("E")) setBodyStyle("");
+    },
+    [bodyStyle],
+  );
+
+  useEffect(() => {
+    if (!inletSize) return;
+    if (!availableInletSizes.includes(inletSize)) {
+      setInletSize("");
+      setOutletSize("");
+    }
+  }, [inletSize, availableInletSizes]);
+
+  useEffect(() => {
+    if (!outletSize) return;
+    if (!availableOutletSizes.includes(outletSize)) setOutletSize("");
+  }, [outletSize, availableOutletSizes]);
+
   useEffect(() => {
     if (!cartridge) return;
-    const valid = cartridgeOptionsWithCapacity.some((c) => c.code === cartridge);
-    if (!valid) setCartridge("");
+    if (!cartridgeOptionsWithCapacity.some((c) => c.code === cartridge)) setCartridge("");
   }, [bodyStyleFamily, cartridge, cartridgeOptionsWithCapacity]);
 
-  // Close cartridge dropdown on click outside
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (cartridgeDropdownRef.current && !cartridgeDropdownRef.current.contains(e.target as Node)) {
@@ -208,35 +423,10 @@ export default function TXVBuilder({
     }
   }, [cartridgeDropdownOpen]);
 
-  const selectedCartridgeOption = useMemo(
-    () => cartridgeOptionsWithCapacity.find((c) => c.code === cartridge),
-    [cartridge, cartridgeOptionsWithCapacity],
-  );
-
-  // Filter body styles by equalizer: external = names ending in "E", internal = no trailing "E"
-  const bodyStylesVisible = useMemo(() => {
-    if (equalizer === "external") return EXTERNAL_BODY_STYLES;
-    if (equalizer === "internal") return INTERNAL_BODY_STYLES;
-    return BODY_STYLES;
-  }, [equalizer]);
-
-  const setEqualizerAndClearBodyIfNeeded = useCallback((value: string) => {
-    setEqualizer(value);
-    if (value === "external" && bodyStyle && !bodyStyle.endsWith("E")) setBodyStyle("");
-    if (value === "internal" && bodyStyle && bodyStyle.endsWith("E")) setBodyStyle("");
-  }, [bodyStyle]);
+  // --- Submit -------------------------------------------------------------
 
   const filledCount = [refrigerant, bodyStyle, temperature, tonnage].filter(Boolean).length;
   const canSubmit = filledCount >= 2;
-
-  const buildPreview = useCallback(() => {
-    const body = bodyStyle || "";
-    const charge = chargeLetter || "";
-    const e = equalizer === "external" ? "E" : "";
-    const cart = cartridge || "";
-    if (!body && !charge && !cart) return "—";
-    return `${body}${charge}${e}${cart ? "-" + cart : ""}` || "—";
-  }, [bodyStyle, chargeLetter, equalizer, cartridge]);
 
   const handleSubmit = useCallback(() => {
     if (!canSubmit) return;
@@ -249,28 +439,34 @@ export default function TXVBuilder({
       power_element: powerElement || undefined,
       tonnage: tonnage || undefined,
       equalizer: equalizer || undefined,
-      connection_size: connectionSize || undefined,
+      inlet_size: inletSize || undefined,
+      outlet_size: outletSize || undefined,
       oem_unit_model: oemUnitModel.trim() || undefined,
+      body_part_number: bodyPartNumber || undefined,
+      cartridge_part_number: cartridgePartNumber || undefined,
+      powerhead_part_number: powerheadPartNumber || undefined,
     });
   }, [
-    canSubmit,
-    temperature,
-    refrigerant,
-    bodyStyle,
-    cartridge,
-    powerElement,
-    tonnage,
-    equalizer,
-    connectionSize,
-    oemUnitModel,
-    onSubmit,
+    canSubmit, temperature, refrigerant, bodyStyle, cartridge, powerElement,
+    tonnage, equalizer, inletSize, outletSize, oemUnitModel, bodyPartNumber,
+    cartridgePartNumber, powerheadPartNumber, onSubmit,
   ]);
+
+  // --- Helpers ------------------------------------------------------------
 
   const isPrefilled = (key: keyof TxvBuilderPrefill) => prefill[key] != null && prefill[key] !== "";
 
   const inputBase =
     "mt-1 w-full rounded border border-[#2A2A2E] bg-[#1A1A1D] px-3 py-1.5 text-sm text-white focus:border-orange-400 focus:outline-none";
   const inputHighlight = "ring-1 ring-orange-400/60 border-orange-400/50";
+
+  const powerElementLabel = (o: string) => {
+    if (o === "KT47") return `${o} (recommended)`;
+    if (o === "KT43") return `${o} (superseded — use if KT47 unavailable)`;
+    return o;
+  };
+
+  // --- Render -------------------------------------------------------------
 
   return (
     <div className="rounded-lg border border-[#2A2A2E] bg-[#1A1A1D] p-4 text-sm">
@@ -289,14 +485,12 @@ export default function TXVBuilder({
           >
             <option value="">Select…</option>
             {TEMPERATURE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
+              <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
         </label>
 
-        {/* Refrigerant / charge */}
+        {/* Refrigerant */}
         <label className="block">
           <span className="text-gray-300">Refrigerant / charge</span>
           <select
@@ -306,14 +500,12 @@ export default function TXVBuilder({
           >
             <option value="">{temperature ? "Select…" : "Select temperature first"}</option>
             {refrigerantOptionsSorted.map((o) => (
-              <option key={o.refrigerant} value={o.refrigerant}>
-                {o.label}
-              </option>
+              <option key={o.refrigerant} value={o.refrigerant}>{o.label}</option>
             ))}
           </select>
         </label>
 
-        {/* Equalizer: internal vs external (E at end of body style) */}
+        {/* Equalizer */}
         <label className="block">
           <span className="text-gray-300">Equalizer</span>
           <select
@@ -323,14 +515,12 @@ export default function TXVBuilder({
           >
             <option value="">Any — show all body styles</option>
             {EQUALIZER_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
+              <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
         </label>
 
-        {/* Body style (filtered by equalizer: internal = no trailing E, external = E at end) */}
+        {/* Body style */}
         <label className="block">
           <span className="text-gray-300">Body style</span>
           <div
@@ -353,9 +543,7 @@ export default function TXVBuilder({
                   src={`/body_styles/${code}.PNG`}
                   alt={code}
                   className="h-[72px] w-[72px] shrink-0 object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
                 <span>{code}</span>
               </button>
@@ -363,7 +551,40 @@ export default function TXVBuilder({
           </div>
         </label>
 
-        {/* Cartridge (Q vs BQ by body style; nominal capacity by selected refrigerant; color swatch per option) */}
+        {/* Inlet / Outlet sizes */}
+        {bodyStyle && (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-gray-300">Inlet size</span>
+              <select
+                value={inletSize}
+                onChange={(e) => setInletSize(e.target.value)}
+                className={`${inputBase} ${isPrefilled("inlet_size") ? inputHighlight : ""}`}
+              >
+                <option value="">Select…</option>
+                {availableInletSizes.map((s) => (
+                  <option key={s} value={s}>{s}&quot;</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-gray-300">Outlet size</span>
+              <select
+                value={outletSize}
+                onChange={(e) => setOutletSize(e.target.value)}
+                className={`${inputBase} ${isPrefilled("outlet_size") ? inputHighlight : ""}`}
+                disabled={!inletSize}
+              >
+                <option value="">{inletSize ? "Select…" : "Select inlet first"}</option>
+                {availableOutletSizes.map((s) => (
+                  <option key={s} value={s}>{s}&quot;</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+
+        {/* Cartridge */}
         <label className="block">
           <span className="text-gray-300">Cartridge</span>
           {cartridgeEnabled ? (
@@ -380,7 +601,7 @@ export default function TXVBuilder({
                       aria-hidden
                     />
                     <span className="truncate">
-                      {selectedCartridgeOption.code} — {selectedCartridgeOption.nominalCapacity} ton
+                      {cartridgePartNumber} ({selectedCartridgeOption.code}) — {selectedCartridgeOption.nominalCapacity} ton
                     </span>
                   </>
                 ) : (
@@ -390,6 +611,7 @@ export default function TXVBuilder({
                   {cartridgeDropdownOpen ? "▴" : "▾"}
                 </span>
               </button>
+
               {cartridgeDropdownOpen && (
                 <ul
                   className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded border border-[#2A2A2E] bg-[#1A1A1D] py-1 shadow-lg"
@@ -398,28 +620,30 @@ export default function TXVBuilder({
                   {(refrigerant
                     ? cartridgeOptionsWithCapacity.filter((c) => c.nominalCapacity && c.nominalCapacity !== "—")
                     : cartridgeOptionsWithCapacity
-                  ).map((c) => (
-                    <li
-                      key={c.code}
-                      role="option"
-                      aria-selected={cartridge === c.code}
-                      className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#2A2A2E] ${cartridge === c.code ? "bg-orange-500/20" : ""}`}
-                      onClick={() => {
-                        setCartridge(c.code);
-                        setCartridgeDropdownOpen(false);
-                      }}
-                    >
-                      <span
-                        className={`h-5 w-5 shrink-0 rounded border border-[#2A2A2E] ${CARTRIDGE_COLOR_CLASS[c.color] ?? "bg-gray-600"}`}
-                        title={c.color}
-                      />
-                      <span className="font-medium text-gray-200">{c.code}</span>
-                      <span className="text-gray-400">—</span>
-                      <span className="text-gray-300">{c.nominalCapacity} ton</span>
-                    </li>
-                  ))}
+                  ).map((c) => {
+                    const pn = resolveCartridgePN(bodyStyleFamily, c.code);
+                    return (
+                      <li
+                        key={c.code}
+                        role="option"
+                        aria-selected={cartridge === c.code}
+                        className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#2A2A2E] ${cartridge === c.code ? "bg-orange-500/20" : ""}`}
+                        onClick={() => { setCartridge(c.code); setCartridgeDropdownOpen(false); }}
+                      >
+                        <span
+                          className={`h-5 w-5 shrink-0 rounded border border-[#2A2A2E] ${CARTRIDGE_COLOR_CLASS[c.color] ?? "bg-gray-600"}`}
+                          title={c.color}
+                        />
+                        <span className="font-medium text-gray-200">{pn}</span>
+                        <span className="text-xs text-gray-500">({c.code})</span>
+                        <span className="text-gray-400">—</span>
+                        <span className="text-gray-300">{c.nominalCapacity} ton</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
+
               {bodyStyleFamily && (
                 <p className="mt-1 text-[10px] text-gray-500">
                   {bodyStyleFamily} cartridge
@@ -427,7 +651,18 @@ export default function TXVBuilder({
                 </p>
               )}
               {refrigerant && cartridgeOptionsWithCapacity.filter((c) => c.nominalCapacity && c.nominalCapacity !== "—").length === 0 && (
-                <p className="mt-1 text-[10px] text-amber-500">No cartridge options for {refrigerant} with {bodyStyleFamily} body in this reference.</p>
+                <p className="mt-1 text-[10px] text-amber-500">
+                  No cartridge options for {refrigerant} with {bodyStyleFamily} body in this reference.
+                </p>
+              )}
+              {bodyStyleFamily === "BQ" && (
+                <button
+                  type="button"
+                  onClick={() => setShowUncommonCartridges((s) => !s)}
+                  className="mt-1 text-[10px] text-orange-400 hover:underline"
+                >
+                  {showUncommonCartridges ? "− Hide BP15 bypass variants" : "+ Show BP15 bypass variants"}
+                </button>
               )}
             </div>
           ) : (
@@ -436,7 +671,7 @@ export default function TXVBuilder({
         </label>
 
         {/* Power element */}
-        <label className="block">
+        <div className="block">
           <span className="text-gray-300">Power element</span>
           <select
             value={powerElement}
@@ -444,21 +679,38 @@ export default function TXVBuilder({
             className={`${inputBase} ${isPrefilled("power_element") ? inputHighlight : ""}`}
           >
             <option value="">Select…</option>
-            {POWER_ELEMENT_OPTIONS.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
+            {powerElementOptions.map((o) => (
+              <option key={o} value={o}>{powerElementLabel(o)}</option>
             ))}
           </select>
-        </label>
-
-        {/* Part preview */}
-        <div className="mt-3">
-          <span className="font-semibold text-gray-300">Part preview:</span>
-          <span className="ml-2 font-mono text-white">{buildPreview()}</span>
+          <p className="mt-1 text-[10px] text-gray-500">
+            KT47 supersedes KT43 — same charge elements, wider body neck (larger wrench).
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowUncommonPower((s) => !s)}
+            className="mt-0.5 text-[10px] text-orange-400 hover:underline"
+          >
+            {showUncommonPower ? "− Hide uncommon sizes" : "+ Show uncommon sizes (KT33, KT45, KT63, KT85)"}
+          </button>
         </div>
 
-        {/* + More Specs */}
+        {/* Resolved part numbers */}
+        <div className="mt-3 rounded border border-[#2A2A2E] bg-[#111113] p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-orange-400">
+            Resolved Part Numbers
+          </p>
+          <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-sm">
+            <span className="text-gray-500">Body:</span>
+            <span className={bodyPartNumber ? "text-white" : "text-gray-600"}>{bodyPartNumber || "—"}</span>
+            <span className="text-gray-500">Cartridge:</span>
+            <span className={cartridgePartNumber ? "text-white" : "text-gray-600"}>{cartridgePartNumber || "—"}</span>
+            <span className="text-gray-500">Powerhead:</span>
+            <span className={powerheadPartNumber ? "text-white" : "text-gray-600"}>{powerheadPartNumber || "—"}</span>
+          </div>
+        </div>
+
+        {/* More specs */}
         <div className="border-t border-[#2A2A2E] pt-3">
           <button
             type="button"
@@ -478,24 +730,7 @@ export default function TXVBuilder({
                 >
                   <option value="">—</option>
                   {TONNAGE_OPTIONS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-gray-400">Connection size</span>
-                <select
-                  value={connectionSize}
-                  onChange={(e) => setConnectionSize(e.target.value)}
-                  className={`${inputBase} mt-0.5`}
-                >
-                  <option value="">—</option>
-                  {CONNECTION_SIZE_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
+                    <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
               </label>
