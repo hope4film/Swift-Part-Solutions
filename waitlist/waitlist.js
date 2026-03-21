@@ -78,7 +78,7 @@ form.addEventListener('submit', async (e) => {
 
     if (error) {
       if (error.code === '23505') {
-        showMessage('That email is already on the waitlist — you're all set!', false);
+        showMessage("That email is already on the waitlist — you're all set!", false);
       } else {
         console.error('Supabase insert error:', error);
         showMessage('Something went wrong. Please try again.', true);
