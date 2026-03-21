@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TXV Builder — Swift Part Solutions</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Free TXV Builder — spec out a Sporlan thermostatic expansion valve by refrigerant, body style, cartridge, and more." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            shell:   '#1E1E20',
+            header:  '#1A1A1D',
+            border:  '#2A2A2E',
+            accent:  '#FB923C',
+            'accent-hover': '#F97316',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <style>
+    html { scroll-behavior: smooth; }
+    select, input { outline: none; }
+    select:focus, input:focus { box-shadow: 0 0 0 2px #FB923C; border-color: #FB923C; }
+  </style>
+</head>
+
+<body class="bg-shell text-white font-sans min-h-screen flex flex-col antialiased">
+
+  <!-- ─── Header ─── -->
+  <header class="bg-header border-b border-border px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
+    <a href="../waitlist/" class="text-base font-semibold tracking-tight hover:text-accent transition-colors">
+      Swift Part Solutions
+    </a>
+    <a href="../waitlist/#waitlist" class="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-2 rounded transition-colors">
+      Get Early Access
+    </a>
+  </header>
+
+  <!-- ─── Main ─── -->
+  <main class="flex-1 w-full max-w-2xl mx-auto px-4 py-10">
+    <h1 class="text-2xl sm:text-3xl font-bold text-center mb-2">TXV Builder</h1>
+    <p class="text-gray-400 text-center mb-8 max-w-lg mx-auto">
+      Spec out a thermostatic expansion valve — pick your refrigerant, body style, and cartridge to build a part number. No account needed.
+    </p>
+
+    <div class="rounded-lg border border-border bg-header p-5 space-y-5">
+
+      <!-- Temperature -->
+      <label class="block">
+        <span class="text-sm font-medium text-gray-300">Temperature</span>
+        <select id="temperature" class="mt-1 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
+          <option value="">Select…</option>
+        </select>
+      </label>
+
+      <!-- Refrigerant -->
+      <label class="block">
+        <span class="text-sm font-medium text-gray-300">Refrigerant / charge</span>
+        <select id="refrigerant" class="mt-1 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
+          <option value="">Select temperature first</option>
+        </select>
+      </label>
+
+      <!-- Equalizer -->
+      <label class="block">
+        <span class="text-sm font-medium text-gray-300">Equalizer</span>
+        <select id="equalizer" class="mt-1 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
+          <option value="">Any — show all body styles</option>
+          <option value="internal">Internal equalized</option>
+          <option value="external">External equalized</option>
+        </select>
+      </label>
+
+      <!-- Body Style -->
+      <div>
+        <span class="text-sm font-medium text-gray-300">Body style</span>
+        <div id="body-style-grid" class="mt-1 flex flex-wrap gap-2 rounded border border-border p-2"></div>
+      </div>
+
+      <!-- Cartridge -->
+      <div>
+        <span class="text-sm font-medium text-gray-300">Cartridge</span>
+        <div id="cartridge-section" class="mt-1 relative">
+          <p id="cartridge-placeholder" class="text-xs text-gray-500">Select refrigerant and body style first.</p>
+
+          <!-- Custom dropdown trigger -->
+          <button type="button" id="cartridge-btn" class="hidden mt-1 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-left flex items-center gap-2" aria-haspopup="listbox">
+            <span id="cartridge-btn-text" class="text-gray-500 truncate flex-1">Select capacity code…</span>
+            <span class="shrink-0 text-gray-400" aria-hidden>▾</span>
+          </button>
+
+          <!-- Dropdown list -->
+          <ul id="cartridge-list" class="hidden absolute z-10 mt-1 max-h-60 overflow-auto rounded border border-border bg-header py-1 shadow-lg" role="listbox"></ul>
+
+          <p id="cartridge-family-hint" class="hidden mt-1 text-[10px] text-gray-500"></p>
+          <p id="cartridge-no-match" class="hidden mt-1 text-[10px] text-amber-500"></p>
+        </div>
+      </div>
+
+      <!-- Power element -->
+      <label class="block">
+        <span class="text-sm font-medium text-gray-300">Power element</span>
+        <select id="power-element" class="mt-1 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
+          <option value="">Select…</option>
+        </select>
+      </label>
+
+      <!-- Part preview -->
+      <div class="pt-2 border-t border-border">
+        <span class="font-semibold text-gray-300">Part preview:</span>
+        <span id="part-preview" class="ml-2 font-mono text-white">—</span>
+      </div>
+
+      <!-- More Specs toggle -->
+      <div class="border-t border-border pt-3">
+        <button type="button" id="more-specs-toggle" class="text-xs text-accent hover:underline">+ More specs</button>
+        <div id="more-specs" class="hidden mt-3 space-y-3">
+          <label class="block">
+            <span class="text-sm text-gray-400">Tonnage / capacity</span>
+            <select id="tonnage" class="mt-0.5 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
+              <option value="">—</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="text-sm text-gray-400">Connection size</span>
+            <select id="connection-size" class="mt-0.5 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white">
+              <option value="">—</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="text-sm text-gray-400">OEM unit model</span>
+            <input type="text" id="oem-unit-model" placeholder="Optional" class="mt-0.5 w-full rounded border border-border bg-shell px-3 py-2 text-sm text-white placeholder-gray-600" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="button" id="submit-btn" disabled
+        class="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-black hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        Select at least 2: refrigerant, body style, temperature, or tonnage
+      </button>
+
+      <!-- Result output (shown after submit) -->
+      <div id="result-output" class="hidden rounded-lg border border-accent/40 bg-accent/10 p-4 text-sm space-y-1"></div>
+    </div>
+
+    <p class="text-center text-xs text-gray-500 mt-6">
+      Want more tools like this?
+      <a href="../waitlist/#waitlist" class="text-accent hover:underline">Join the SPS waitlist</a>.
+    </p>
+  </main>
+
+  <!-- ─── Footer ─── -->
+  <footer class="text-xs text-gray-500 text-center py-6 border-t border-gray-800 mt-auto">
+    <p>Swift Part Solutions &copy; 2025</p>
+    <p class="mt-1">Questions? <a href="mailto:hello@swiftpartsolutions.com" class="underline hover:text-white">hello@swiftpartsolutions.com</a></p>
+  </footer>
+
+  <script src="txv-builder.js"></script>
+</body>
+</html>
