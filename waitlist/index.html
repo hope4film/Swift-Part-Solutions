@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Swift Part Solutions — Get Early Access</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="SPS helps HVACR techs find parts faster, identify parts from photos, and streamline quote requests. Join the waitlist for early access." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            shell:   '#1E1E20',
+            header:  '#1A1A1D',
+            border:  '#2A2A2E',
+            accent:  '#FB923C',
+            'accent-hover': '#F97316',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <style>
+    html { scroll-behavior: smooth; }
+    .field-focus:focus { outline: none; box-shadow: 0 0 0 2px #FB923C; border-color: #FB923C; }
+  </style>
+
+  <!-- TODO: Replace with your Supabase project URL and anon key -->
+  <script>
+    window.__SPS_SUPABASE__ = {
+      url:     'https://YOUR_PROJECT.supabase.co',
+      anonKey: 'YOUR_ANON_KEY'
+    };
+  </script>
+</head>
+
+<body class="bg-shell text-white font-sans min-h-screen flex flex-col antialiased">
+
+  <!-- ─── Header ─── -->
+  <header class="bg-header border-b border-border px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
+    <a href="#" class="text-base font-semibold tracking-tight hover:text-accent transition-colors">
+      Swift Part Solutions
+    </a>
+    <nav class="hidden sm:flex items-center gap-6 text-sm text-gray-400">
+      <a href="#features" class="hover:text-white transition-colors">Features</a>
+      <a href="#txv" class="hover:text-white transition-colors">Free Tool</a>
+      <a href="#waitlist" class="hover:text-white transition-colors">Waitlist</a>
+    </nav>
+    <a href="#waitlist" class="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-2 rounded transition-colors">
+      Get Early Access
+    </a>
+  </header>
+
+  <!-- ─── Hero ─── -->
+  <section class="w-full max-w-4xl mx-auto px-4 pt-20 pb-16 text-center">
+    <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight tracking-widest uppercase">
+      Swift Part Solutions
+    </h1>
+    <p class="mt-4 text-xl sm:text-2xl font-semibold text-gray-300">
+      Part sourcing on the go.
+    </p>
+    <p class="mt-2 text-lg sm:text-xl font-semibold text-accent">
+      Snap it. Search it. Save it. Quote it.
+    </p>
+    <p class="mt-6 max-w-2xl mx-auto text-gray-400 text-lg leading-relaxed">
+      You've got better things to do than sit on hold, scroll through a million photos, and thumb out emails on a job site just to chase dead ends.
+    </p>
+    <p class="mt-4 max-w-2xl mx-auto text-gray-300 text-lg leading-relaxed">
+      SPS is being built to help techs find parts faster and keep the job moving.
+    </p>
+    <a href="#waitlist" class="mt-8 inline-block bg-accent hover:bg-accent-hover text-black text-lg font-bold px-8 py-3 rounded transition-colors">
+      Get Early Access
+    </a>
+    <p class="mt-3 text-sm text-gray-500">
+      Join the waitlist for beta access, launch updates, and early pricing when SPS goes live.
+    </p>
+  </section>
+
+  <!-- ─── Features ─── -->
+  <section id="features" class="w-full max-w-5xl mx-auto px-4 py-16">
+    <h2 class="text-2xl sm:text-3xl font-bold text-center mb-12">What SPS Can Do</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <div class="bg-header border border-border rounded-lg p-6">
+        <div class="text-accent text-2xl mb-3"><i class="fas fa-magnifying-glass"></i></div>
+        <h3 class="font-semibold text-lg mb-1">Find parts faster</h3>
+        <p class="text-gray-400 text-sm">Smarter search built around the parts techs actually need.</p>
+      </div>
+
+      <div class="bg-header border border-border rounded-lg p-6">
+        <div class="text-accent text-2xl mb-3"><i class="fas fa-camera"></i></div>
+        <h3 class="font-semibold text-lg mb-1">ID parts from photos</h3>
+        <p class="text-gray-400 text-sm">Snap a pic of a nameplate or part and let SPS figure it out.</p>
+      </div>
+
+      <div class="bg-header border border-border rounded-lg p-6">
+        <div class="text-accent text-2xl mb-3"><i class="fas fa-ruler-combined"></i></div>
+        <h3 class="font-semibold text-lg mb-1">Specs &amp; dimensions</h3>
+        <p class="text-gray-400 text-sm">Pull up the details you need without digging through catalogs.</p>
+      </div>
+
+      <div class="bg-header border border-border rounded-lg p-6">
+        <div class="text-accent text-2xl mb-3"><i class="fas fa-paper-plane"></i></div>
+        <h3 class="font-semibold text-lg mb-1">Streamline quotes</h3>
+        <p class="text-gray-400 text-sm">Send quote requests without thumb-typing emails from the van.</p>
+      </div>
+
+      <div class="bg-header border border-border rounded-lg p-6">
+        <div class="text-accent text-2xl mb-3"><i class="fas fa-bookmark"></i></div>
+        <h3 class="font-semibold text-lg mb-1">Save parts for later</h3>
+        <p class="text-gray-400 text-sm">Bookmark parts you use often so you're not starting from scratch every time.</p>
+      </div>
+
+      <div class="bg-header border border-border rounded-lg p-6">
+        <div class="text-accent text-2xl mb-3"><i class="fas fa-comments"></i></div>
+        <h3 class="font-semibold text-lg mb-1">Speaks HVACR</h3>
+        <p class="text-gray-400 text-sm">Built around the way techs actually talk about parts and equipment.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── Frustration / Pain Section ─── -->
+  <section class="w-full bg-header border-y border-border">
+    <div class="max-w-3xl mx-auto px-4 py-16 text-center">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Sound familiar?</h2>
+      <div class="space-y-4 text-gray-400 text-lg leading-relaxed">
+        <p>You're on a roof in July, squinting at a nameplate, trying to figure out a part number while you've been on hold for twenty minutes.</p>
+        <p>You scroll through 400 photos to find one blurry label you snapped two weeks ago.</p>
+        <p>You thumb-type an email to three different suppliers and hope one of them has it.</p>
+        <p>Then you do it all again tomorrow.</p>
+      </div>
+      <p class="mt-8 text-white font-semibold text-lg">
+        SPS is being built to make that go away.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── Free TXV Builder ─── -->
+  <section id="txv" class="w-full max-w-4xl mx-auto px-4 py-16 text-center">
+    <h2 class="text-2xl sm:text-3xl font-bold mb-4">Try a Free Tool</h2>
+    <p class="text-gray-400 text-lg max-w-2xl mx-auto mb-8">
+      The TXV Builder helps you spec out a thermostatic expansion valve in minutes — pick your refrigerant, tonnage, and connection type and get a part number. No account needed.
+    </p>
+    <!-- TODO: Replace href with live TXV Builder URL -->
+    <a href="#" class="inline-block border-2 border-accent text-accent hover:bg-accent hover:text-black font-semibold px-8 py-3 rounded transition-colors">
+      Try the Free TXV Builder
+    </a>
+  </section>
+
+  <!-- ─── Founder ─── -->
+  <section class="w-full bg-header border-y border-border">
+    <div class="max-w-3xl mx-auto px-4 py-16">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6 text-center">Why I'm Building This</h2>
+      <div class="text-gray-400 text-lg leading-relaxed space-y-4">
+        <p>
+          I'm a tech. I deal with the same part-sourcing headaches you do — hold music, dead-end phone calls, messy notes, and too many tabs open trying to cross-reference a model number.
+        </p>
+        <p>
+          I started building SPS because I wanted a tool that actually works the way we work — quick, from the field, without the usual chaos. Something a tech would build for other techs.
+        </p>
+        <p>
+          That's what this is. No corporate fluff. Just a better way to find parts and keep the job moving.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Waitlist Form ─── -->
+  <section id="waitlist" class="w-full max-w-2xl mx-auto px-4 py-20">
+    <h2 class="text-2xl sm:text-3xl font-bold text-center mb-3">Get Early Access</h2>
+    <p class="text-gray-400 text-center mb-10">
+      Sign up now and be first in line when SPS launches. No spam — just updates and early access.
+    </p>
+
+    <form id="waitlist-form" class="space-y-5" novalidate>
+      <!-- Name row -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="first_name" class="block text-sm font-medium text-gray-300 mb-1">First name <span class="text-red-400">*</span></label>
+          <input type="text" id="first_name" name="first_name" required autocomplete="given-name"
+            class="field-focus w-full bg-shell border border-border rounded px-3 py-2 text-white placeholder-gray-600 text-sm" placeholder="John" />
+        </div>
+        <div>
+          <label for="last_name" class="block text-sm font-medium text-gray-300 mb-1">Last name <span class="text-red-400">*</span></label>
+          <input type="text" id="last_name" name="last_name" required autocomplete="family-name"
+            class="field-focus w-full bg-shell border border-border rounded px-3 py-2 text-white placeholder-gray-600 text-sm" placeholder="Doe" />
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div>
+        <label for="email" class="block text-sm font-medium text-gray-300 mb-1">Email <span class="text-red-400">*</span></label>
+        <input type="email" id="email" name="email" required autocomplete="email"
+          class="field-focus w-full bg-shell border border-border rounded px-3 py-2 text-white placeholder-gray-600 text-sm" placeholder="john@example.com" />
+      </div>
+
+      <!-- Field type -->
+      <div>
+        <label for="field_type" class="block text-sm font-medium text-gray-300 mb-1">What do you do? <span class="text-red-400">*</span></label>
+        <select id="field_type" name="field_type" required
+          class="field-focus w-full bg-shell border border-border rounded px-3 py-2 text-white text-sm appearance-none">
+          <option value="" disabled selected>Select your field</option>
+          <option value="Residential HVAC">Residential HVAC</option>
+          <option value="Commercial HVAC">Commercial HVAC</option>
+          <option value="Refrigeration">Refrigeration</option>
+          <option value="Supply House">Supply House</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <!-- Optional: display name + company -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="display_name" class="block text-sm font-medium text-gray-300 mb-1">Display name <span class="text-gray-600 text-xs">(optional)</span></label>
+          <input type="text" id="display_name" name="display_name" autocomplete="nickname"
+            class="field-focus w-full bg-shell border border-border rounded px-3 py-2 text-white placeholder-gray-600 text-sm" placeholder="CoolTech42" />
+        </div>
+        <div>
+          <label for="company_name" class="block text-sm font-medium text-gray-300 mb-1">Company <span class="text-gray-600 text-xs">(optional)</span></label>
+          <input type="text" id="company_name" name="company_name" autocomplete="organization"
+            class="field-focus w-full bg-shell border border-border rounded px-3 py-2 text-white placeholder-gray-600 text-sm" placeholder="ACME Mechanical" />
+        </div>
+      </div>
+
+      <!-- Phone -->
+      <div>
+        <label for="phone" class="block text-sm font-medium text-gray-300 mb-1">Phone <span class="text-gray-600 text-xs">(optional)</span></label>
+        <input type="tel" id="phone" name="phone" autocomplete="tel"
+          class="field-focus w-full bg-shell border border-border rounded px-3 py-2 text-white placeholder-gray-600 text-sm" placeholder="(555) 123-4567" />
+      </div>
+
+      <!-- Biggest headache -->
+      <div>
+        <label for="biggest_parts_headache" class="block text-sm font-medium text-gray-300 mb-1">Biggest parts headache? <span class="text-gray-600 text-xs">(optional)</span></label>
+        <textarea id="biggest_parts_headache" name="biggest_parts_headache" rows="3"
+          class="field-focus w-full bg-shell border border-border rounded px-3 py-2 text-white placeholder-gray-600 text-sm resize-y" placeholder="Tell us what drives you nuts about finding parts..."></textarea>
+      </div>
+
+      <!-- Consent -->
+      <div class="flex items-start gap-3">
+        <input type="checkbox" id="consent" name="consent" required
+          class="mt-1 h-4 w-4 rounded border-border bg-shell text-accent focus:ring-accent" />
+        <label for="consent" class="text-sm text-gray-400 leading-snug">
+          I agree to receive SPS updates and early access emails. <span class="text-red-400">*</span>
+        </label>
+      </div>
+
+      <!-- Error / success messages -->
+      <div id="form-message" class="hidden text-sm rounded px-4 py-3"></div>
+
+      <!-- Submit -->
+      <button type="submit" id="submit-btn"
+        class="w-full bg-accent hover:bg-accent-hover text-black font-bold py-3 rounded transition-colors text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+        Join the Waitlist
+      </button>
+    </form>
+  </section>
+
+  <!-- ─── Footer ─── -->
+  <footer class="text-xs text-gray-500 text-center py-6 border-t border-gray-800 mt-auto">
+    <p>Swift Part Solutions &copy; 2025</p>
+    <!-- TODO: Replace with real contact email -->
+    <p class="mt-1">Questions? <a href="mailto:hello@swiftpartsolutions.com" class="underline hover:text-white">hello@swiftpartsolutions.com</a></p>
+  </footer>
+
+  <!-- Supabase JS (CDN, ES module) -->
+  <script type="module" src="./waitlist.js"></script>
+</body>
+</html>
