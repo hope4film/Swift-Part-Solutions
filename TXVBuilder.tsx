@@ -43,6 +43,11 @@ const TEMP_PRIORITY_REFRIGERANTS: Record<string, string[]> = {
   commercial_refrigeration: [],
 };
 
+/** "R22" → "R-22", "R407C" → "R-407C", "R1234yf" → "R-1234yf" */
+function formatRefrigerantName(code: string): string {
+  return code.replace(/^R(\d)/, "R-$1");
+}
+
 // ---------------------------------------------------------------------------
 // Equalizer & Body Styles
 // ---------------------------------------------------------------------------
@@ -186,44 +191,70 @@ function resolveCartridgePN(family: "Q" | "BQ" | "", code: string): string {
 const STANDARD_POWER_ELEMENTS = ["KT47", "KT43", "KT53", "KT83"];
 const UNCOMMON_POWER_ELEMENTS = ["KT33", "KT45", "KT63", "KT85"];
 
-/** Suffix appended to the element base by charge group and temperature application. */
-const POWERHEAD_SUFFIXES: Record<string, Partial<Record<string, string>>> = {
-  J:   { air_conditioning: "JCP60",  commercial_refrigeration: "JC",    low_temp: "JZ" },
-  V:   { air_conditioning: "VCP100", commercial_refrigeration: "VC",    low_temp: "VZ" },
-  NGA: { air_conditioning: "NGA" },
-  D:   { commercial_refrigeration: "DC" },
-  S:   { air_conditioning: "SCP115", commercial_refrigeration: "SC/PC", low_temp: "SZ" },
+type PowerheadSuffix = { suffix: string; mop?: number };
+
+/** Suffixes by charge letter → temperature application (from Sporlan URI514 catalog). */
+const POWERHEAD_SUFFIXES: Record<string, Partial<Record<string, PowerheadSuffix[]>>> = {
+  J: {
+    air_conditioning:        [{ suffix: "JCP60", mop: 50 }],
+    commercial_refrigeration:[{ suffix: "JC" }],
+  },
+  V: {
+    air_conditioning:        [{ suffix: "VCP100", mop: 90 }],
+    commercial_refrigeration:[{ suffix: "VC" }],
+    low_temp:                [{ suffix: "VZ" }, { suffix: "VZP40", mop: 30 }],
+  },
+  S: {
+    air_conditioning:        [{ suffix: "SCP115", mop: 105 }],
+    commercial_refrigeration:[{ suffix: "SC/PC" }],
+    low_temp:                [{ suffix: "SZ" }, { suffix: "SZP", mop: 35 }],
+  },
 };
 
-/** R410A requires a heavier-construction element; KT43/KT47→KT45, KT83→KT85. */
+/** D charge (R-448A, R-449A) uses the same elements as V charge per the catalog. */
+const CHARGE_ALIAS: Record<string, string> = { D: "V" };
+
+/** Refrigerant-specific additional elements (NGA is only for R-407C and R-407F). */
+const REFRIGERANT_EXTRA_SUFFIXES: Record<string, Partial<Record<string, PowerheadSuffix[]>>> = {
+  R407C: { air_conditioning: [{ suffix: "NGA" }] },
+  R407F: { air_conditioning: [{ suffix: "NGA" }] },
+};
+
+/** R-410A requires a heavier-construction element; KT43/KT47→KT45, KT83→KT85. */
 const R410A_BASE_SWAP: Record<string, string> = {
   KT33: "KT33", KT43: "KT45", KT47: "KT45", KT53: "KT53", KT63: "KT63", KT83: "KT85", KT85: "KT85", KT45: "KT45",
 };
 
-const R410A_SUFFIXES: Partial<Record<string, string>> = {
-  air_conditioning: "ZGA",
+const R410A_SUFFIXES: Partial<Record<string, PowerheadSuffix[]>> = {
+  air_conditioning: [{ suffix: "ZGA" }, { suffix: "ZCP180", mop: 170 }],
 };
 
-function getPowerheadChargeGroup(refrigerant: string, chargeLetter: string): string {
-  if (refrigerant === "R407C") return "NGA";
-  return chargeLetter;
+type ResolvedPowerhead = { partNumber: string; mop?: number };
+
+/** "KT43" → "KT-43" */
+function formatElementBase(base: string): string {
+  return base.replace(/^(KT)(\d+)$/, "$1-$2");
 }
 
-function resolvePowerheadPN(base: string, refrigerant: string, chargeLetter: string, temperature: string): string {
-  if (!base || !chargeLetter || !temperature) return "";
+function resolvePowerheadPNs(base: string, refrigerant: string, chargeLetter: string, temperature: string): ResolvedPowerhead[] {
+  if (!base || !chargeLetter || !temperature) return [];
 
   if (chargeLetter === "Z" && refrigerant === "R410A") {
     const swapped = R410A_BASE_SWAP[base] ?? base;
-    const suffix = R410A_SUFFIXES[temperature];
-    return suffix ? `${swapped}${suffix}` : "";
+    const fmtBase = formatElementBase(swapped);
+    const suffixes = R410A_SUFFIXES[temperature];
+    if (!suffixes) return [];
+    return suffixes.map((s) => ({ partNumber: `${fmtBase}-${s.suffix}`, mop: s.mop }));
   }
-  if (chargeLetter === "Z") return "";
+  if (chargeLetter === "Z") return [];
 
-  const group = getPowerheadChargeGroup(refrigerant, chargeLetter);
-  const suffixes = POWERHEAD_SUFFIXES[group];
-  if (!suffixes) return "";
-  const suffix = suffixes[temperature];
-  return suffix ? `${base}${suffix}` : "";
+  const fmtBase = formatElementBase(base);
+  const effectiveCharge = CHARGE_ALIAS[chargeLetter] ?? chargeLetter;
+  const chargeSuffixes = POWERHEAD_SUFFIXES[effectiveCharge]?.[temperature] ?? [];
+  const extraSuffixes = REFRIGERANT_EXTRA_SUFFIXES[refrigerant]?.[temperature] ?? [];
+  const allSuffixes = [...chargeSuffixes, ...extraSuffixes];
+
+  return allSuffixes.map((s) => ({ partNumber: `${fmtBase}-${s.suffix}`, mop: s.mop }));
 }
 
 // ---------------------------------------------------------------------------
@@ -272,8 +303,12 @@ export default function TXVBuilder({
   const [cartridge, setCartridge] = useState<string>(prefill.cartridge ?? "");
   const [powerElement, setPowerElement] = useState<string>(prefill.power_element ?? "");
   const [equalizer, setEqualizer] = useState<string>(prefill.equalizer ?? "");
-  const [inletSize, setInletSize] = useState<string>(prefill.inlet_size ?? "");
-  const [outletSize, setOutletSize] = useState<string>(prefill.outlet_size ?? "");
+  const [inletSize, setInletSize] = useState<string>(
+    prefill.inlet_size ?? (prefill.temperature === "air_conditioning" ? "" : "3/8"),
+  );
+  const [outletSize, setOutletSize] = useState<string>(
+    prefill.outlet_size ?? (prefill.temperature === "air_conditioning" ? "" : "1/2"),
+  );
   const [tonnage, setTonnage] = useState<string>(prefill.tonnage ?? "");
   const [oemUnitModel, setOemUnitModel] = useState<string>(prefill.oem_unit_model ?? "");
 
@@ -289,13 +324,22 @@ export default function TXVBuilder({
     return REFRIGERANT_OPTIONS.find((o) => o.refrigerant === refrigerant)?.charge ?? "";
   }, [refrigerant]);
 
-  const refrigerantOptionsSorted = useMemo(() => {
+  const refrigerantGroups = useMemo(() => {
+    const groups = new Map<string, typeof REFRIGERANT_OPTIONS>();
+    for (const o of REFRIGERANT_OPTIONS) {
+      const list = groups.get(o.charge) ?? [];
+      list.push(o);
+      groups.set(o.charge, list);
+    }
     const priority = temperature ? TEMP_PRIORITY_REFRIGERANTS[temperature] ?? [] : [];
-    if (priority.length === 0) return REFRIGERANT_OPTIONS;
-    const set = new Set(priority);
-    const first = REFRIGERANT_OPTIONS.filter((o) => set.has(o.refrigerant));
-    const rest = REFRIGERANT_OPTIONS.filter((o) => !set.has(o.refrigerant));
-    return [...first, ...rest];
+    const prioritySet = new Set(priority);
+    const entries = [...groups.entries()].map(([charge, options]) => ({
+      charge,
+      options,
+      hasPriority: options.some((o) => prioritySet.has(o.refrigerant)),
+    }));
+    entries.sort((a, b) => (a.hasPriority === b.hasPriority ? 0 : a.hasPriority ? -1 : 1));
+    return entries;
   }, [temperature]);
 
   const chargeColumn = useMemo(
@@ -377,8 +421,8 @@ export default function TXVBuilder({
       : STANDARD_POWER_ELEMENTS;
   }, [showUncommonPower]);
 
-  const powerheadPartNumber = useMemo(
-    () => resolvePowerheadPN(powerElement, refrigerant, chargeLetter, temperature),
+  const powerheadPartNumbers = useMemo(
+    () => resolvePowerheadPNs(powerElement, refrigerant, chargeLetter, temperature),
     [powerElement, refrigerant, chargeLetter, temperature],
   );
 
@@ -394,7 +438,17 @@ export default function TXVBuilder({
   );
 
   useEffect(() => {
-    if (!inletSize) return;
+    if (temperature === "air_conditioning") {
+      setInletSize((prev) => (prev === "3/8" ? "" : prev));
+      setOutletSize((prev) => (prev === "1/2" ? "" : prev));
+    } else if (!inletSize && !outletSize) {
+      setInletSize("3/8");
+      setOutletSize("1/2");
+    }
+  }, [temperature]);
+
+  useEffect(() => {
+    if (!inletSize || availableInletSizes.length === 0) return;
     if (!availableInletSizes.includes(inletSize)) {
       setInletSize("");
       setOutletSize("");
@@ -402,9 +456,13 @@ export default function TXVBuilder({
   }, [inletSize, availableInletSizes]);
 
   useEffect(() => {
-    if (!outletSize) return;
-    if (!availableOutletSizes.includes(outletSize)) setOutletSize("");
-  }, [outletSize, availableOutletSizes]);
+    if (availableOutletSizes.length === 0) return;
+    if (inletSize && (!outletSize || !availableOutletSizes.includes(outletSize))) {
+      setOutletSize(availableOutletSizes[0]);
+    } else if (outletSize && !availableOutletSizes.includes(outletSize)) {
+      setOutletSize("");
+    }
+  }, [inletSize, availableOutletSizes]);
 
   useEffect(() => {
     if (!cartridge) return;
@@ -444,12 +502,12 @@ export default function TXVBuilder({
       oem_unit_model: oemUnitModel.trim() || undefined,
       body_part_number: bodyPartNumber || undefined,
       cartridge_part_number: cartridgePartNumber || undefined,
-      powerhead_part_number: powerheadPartNumber || undefined,
+      powerhead_part_number: powerheadPartNumbers[0]?.partNumber || undefined,
     });
   }, [
     canSubmit, temperature, refrigerant, bodyStyle, cartridge, powerElement,
     tonnage, equalizer, inletSize, outletSize, oemUnitModel, bodyPartNumber,
-    cartridgePartNumber, powerheadPartNumber, onSubmit,
+    cartridgePartNumber, powerheadPartNumbers, onSubmit,
   ]);
 
   // --- Helpers ------------------------------------------------------------
@@ -491,19 +549,41 @@ export default function TXVBuilder({
         </label>
 
         {/* Refrigerant */}
-        <label className="block">
-          <span className="text-gray-300">Refrigerant / charge</span>
-          <select
-            value={refrigerant}
-            onChange={(e) => setRefrigerant(e.target.value)}
-            className={`${inputBase} ${isPrefilled("refrigerant") ? inputHighlight : ""}`}
+        <div className="block">
+          <span className="text-gray-300">Refrigerant</span>
+          <div
+            className={`mt-1 rounded border p-2 ${
+              isPrefilled("refrigerant") ? "border-orange-400/50 " + inputHighlight : "border-[#2A2A2E]"
+            }`}
           >
-            <option value="">{temperature ? "Select…" : "Select temperature first"}</option>
-            {refrigerantOptionsSorted.map((o) => (
-              <option key={o.refrigerant} value={o.refrigerant}>{o.label}</option>
+            {refrigerantGroups.map((group) => (
+              <div
+                key={group.charge}
+                className="flex items-start gap-2 py-1"
+              >
+                <span className="mt-1 w-5 shrink-0 text-center text-[10px] font-semibold text-gray-500">
+                  {group.charge}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.options.map((o) => (
+                    <button
+                      key={o.refrigerant}
+                      type="button"
+                      onClick={() => setRefrigerant(o.refrigerant)}
+                      className={`rounded border px-2 py-1 text-xs font-medium transition ${
+                        refrigerant === o.refrigerant
+                          ? "border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/30"
+                          : "border-[#2A2A2E] bg-[#2A2A2E] text-gray-300 hover:bg-[#333]"
+                      }`}
+                    >
+                      {formatRefrigerantName(o.refrigerant)}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
-          </select>
-        </label>
+          </div>
+        </div>
 
         {/* Equalizer */}
         <label className="block">
@@ -585,7 +665,7 @@ export default function TXVBuilder({
         )}
 
         {/* Cartridge */}
-        <label className="block">
+        <div className="block">
           <span className="text-gray-300">Cartridge</span>
           {cartridgeEnabled ? (
             <div ref={cartridgeDropdownRef} className="relative">
@@ -628,7 +708,7 @@ export default function TXVBuilder({
                         role="option"
                         aria-selected={cartridge === c.code}
                         className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#2A2A2E] ${cartridge === c.code ? "bg-orange-500/20" : ""}`}
-                        onClick={() => { setCartridge(c.code); setCartridgeDropdownOpen(false); }}
+                        onMouseDown={(e) => { e.preventDefault(); setCartridge(c.code); setCartridgeDropdownOpen(false); }}
                       >
                         <span
                           className={`h-5 w-5 shrink-0 rounded border border-[#2A2A2E] ${CARTRIDGE_COLOR_CLASS[c.color] ?? "bg-gray-600"}`}
@@ -668,7 +748,7 @@ export default function TXVBuilder({
           ) : (
             <p className="mt-1 text-xs text-gray-500">Select refrigerant and body style first.</p>
           )}
-        </label>
+        </div>
 
         {/* Power element */}
         <div className="block">
@@ -706,7 +786,17 @@ export default function TXVBuilder({
             <span className="text-gray-500">Cartridge:</span>
             <span className={cartridgePartNumber ? "text-white" : "text-gray-600"}>{cartridgePartNumber || "—"}</span>
             <span className="text-gray-500">Powerhead:</span>
-            <span className={powerheadPartNumber ? "text-white" : "text-gray-600"}>{powerheadPartNumber || "—"}</span>
+            <span className={powerheadPartNumbers.length ? "text-white" : "text-gray-600"}>
+              {powerheadPartNumbers.length
+                ? powerheadPartNumbers.map((p, i) => (
+                    <span key={i}>
+                      {i > 0 && <br />}
+                      {p.partNumber}
+                      {p.mop != null && <span className="ml-1 text-[10px] text-gray-400">(MOP {p.mop})</span>}
+                    </span>
+                  ))
+                : "—"}
+            </span>
           </div>
         </div>
 

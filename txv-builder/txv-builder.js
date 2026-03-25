@@ -125,14 +125,30 @@ const COLOR_BG = {
   WHITE:  "background:#e5e7eb",
 };
 
-// ─── Powerhead Data ───
+// ─── Powerhead Data (array-based suffixes with optional MOP) ───
 
 const POWERHEAD_SUFFIXES = {
-  J:   { air_conditioning: "JCP60",  commercial_refrigeration: "JC",    low_temp: "JZ" },
-  V:   { air_conditioning: "VCP100", commercial_refrigeration: "VC",    low_temp: "VZ" },
-  NGA: { air_conditioning: "NGA" },
-  D:   { commercial_refrigeration: "DC" },
-  S:   { air_conditioning: "SCP115", commercial_refrigeration: "SC/PC", low_temp: "SZ" },
+  J: {
+    air_conditioning:         [{ suffix: "JCP60", mop: 50 }],
+    commercial_refrigeration: [{ suffix: "JC" }],
+  },
+  V: {
+    air_conditioning:         [{ suffix: "VCP100", mop: 90 }],
+    commercial_refrigeration: [{ suffix: "VC" }],
+    low_temp:                 [{ suffix: "VZ" }, { suffix: "VZP40", mop: 30 }],
+  },
+  S: {
+    air_conditioning:         [{ suffix: "SCP115", mop: 105 }],
+    commercial_refrigeration: [{ suffix: "SC/PC" }],
+    low_temp:                 [{ suffix: "SZ" }, { suffix: "SZP", mop: 35 }],
+  },
+};
+
+const CHARGE_ALIAS = { D: "V" };
+
+const REFRIGERANT_EXTRA_SUFFIXES = {
+  R407C: { air_conditioning: [{ suffix: "NGA" }] },
+  R407F: { air_conditioning: [{ suffix: "NGA" }] },
 };
 
 const R410A_BASE_SWAP = {
@@ -141,7 +157,7 @@ const R410A_BASE_SWAP = {
 };
 
 const R410A_SUFFIXES = {
-  air_conditioning: "ZGA",
+  air_conditioning: [{ suffix: "ZGA" }, { suffix: "ZCP180", mop: 170 }],
 };
 
 // ─── State ───
@@ -166,7 +182,7 @@ let state = {
 // ─── DOM refs ───
 
 const $temperature        = document.getElementById("temperature");
-const $refrigerant        = document.getElementById("refrigerant");
+const $refrigerantGrid    = document.getElementById("refrigerant-grid");
 const $equalizer          = document.getElementById("equalizer");
 const $bodyGrid           = document.getElementById("body-style-grid");
 const $inletOutletSection = document.getElementById("inlet-outlet-section");
@@ -193,6 +209,14 @@ const $resultOutput       = document.getElementById("result-output");
 
 // ─── Helpers ───
 
+function formatRefrigerantName(code) {
+  return code.replace(/^R(\d)/, "R-$1");
+}
+
+function formatElementBase(base) {
+  return base.replace(/^(KT)(\d+)$/, "$1-$2");
+}
+
 function getChargeLetter(refrig) {
   const opt = REFRIGERANT_OPTIONS.find(o => o.refrigerant === refrig);
   return opt ? opt.charge : "";
@@ -215,14 +239,22 @@ function getBodyFamily(bs) {
   return "Q";
 }
 
-function sortedRefrigerants(temp) {
+function getRefrigerantGroups(temp) {
+  const groups = new Map();
+  for (const o of REFRIGERANT_OPTIONS) {
+    const list = groups.get(o.charge) || [];
+    list.push(o);
+    groups.set(o.charge, list);
+  }
   const priority = temp ? (TEMP_PRIORITY_REFRIGERANTS[temp] || []) : [];
-  if (!priority.length) return REFRIGERANT_OPTIONS;
-  const set = new Set(priority);
-  return [
-    ...REFRIGERANT_OPTIONS.filter(o => set.has(o.refrigerant)),
-    ...REFRIGERANT_OPTIONS.filter(o => !set.has(o.refrigerant)),
-  ];
+  const prioritySet = new Set(priority);
+  const entries = [...groups.entries()].map(([charge, options]) => ({
+    charge,
+    options,
+    hasPriority: options.some(o => prioritySet.has(o.refrigerant)),
+  }));
+  entries.sort((a, b) => (a.hasPriority === b.hasPriority ? 0 : a.hasPriority ? -1 : 1));
+  return entries;
 }
 
 function visibleBodyStyles(eq) {
@@ -237,26 +269,25 @@ function resolveCartridgePN(family, code) {
   return "BQC" + code;
 }
 
-function getPowerheadChargeGroup(refrig, charge) {
-  if (refrig === "R407C") return "NGA";
-  return charge;
-}
-
-function resolvePowerheadPN(base, refrig, charge, temp) {
-  if (!base || !charge || !temp) return "";
+function resolvePowerheadPNs(base, refrig, charge, temp) {
+  if (!base || !charge || !temp) return [];
 
   if (charge === "Z" && refrig === "R410A") {
     const swapped = R410A_BASE_SWAP[base] || base;
-    const suffix = R410A_SUFFIXES[temp];
-    return suffix ? (swapped + suffix) : "";
+    const fmtBase = formatElementBase(swapped);
+    const suffixes = R410A_SUFFIXES[temp];
+    if (!suffixes) return [];
+    return suffixes.map(s => ({ partNumber: fmtBase + "-" + s.suffix, mop: s.mop }));
   }
-  if (charge === "Z") return "";
+  if (charge === "Z") return [];
 
-  const group = getPowerheadChargeGroup(refrig, charge);
-  const suffixes = POWERHEAD_SUFFIXES[group];
-  if (!suffixes) return "";
-  const suffix = suffixes[temp];
-  return suffix ? (base + suffix) : "";
+  const fmtBase = formatElementBase(base);
+  const effectiveCharge = CHARGE_ALIAS[charge] || charge;
+  const chargeSuffixes = (POWERHEAD_SUFFIXES[effectiveCharge] && POWERHEAD_SUFFIXES[effectiveCharge][temp]) || [];
+  const extraSuffixes = (REFRIGERANT_EXTRA_SUFFIXES[refrig] && REFRIGERANT_EXTRA_SUFFIXES[refrig][temp]) || [];
+  const allSuffixes = [...chargeSuffixes, ...extraSuffixes];
+
+  return allSuffixes.map(s => ({ partNumber: fmtBase + "-" + s.suffix, mop: s.mop }));
 }
 
 function getAvailableInletSizes(bs) {
@@ -327,10 +358,22 @@ function renderTemperature() {
 }
 
 function renderRefrigerant() {
-  const sorted = sortedRefrigerants(state.temperature);
-  const placeholder = state.temperature ? "Select\u2026" : "Select temperature first";
-  populateSelect($refrigerant, sorted, placeholder);
-  $refrigerant.value = state.refrigerant;
+  const groups = getRefrigerantGroups(state.temperature);
+  $refrigerantGrid.innerHTML = groups.map(group => {
+    const buttons = group.options.map(o => {
+      const active = state.refrigerant === o.refrigerant;
+      const cls = active
+        ? "border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/30"
+        : "border-[#2A2A2E] bg-[#2A2A2E] text-gray-300 hover:bg-[#333]";
+      return '<button type="button" data-refrigerant="' + o.refrigerant + '" class="rounded border px-2 py-1 text-xs font-medium transition ' + cls + '">' +
+        formatRefrigerantName(o.refrigerant) +
+      '</button>';
+    }).join("");
+    return '<div class="flex items-start gap-2 py-1">' +
+      '<span class="mt-1 w-5 shrink-0 text-center text-[10px] font-semibold text-gray-500">' + group.charge + '</span>' +
+      '<div class="flex flex-wrap gap-1.5">' + buttons + '</div>' +
+    '</div>';
+  }).join("");
 }
 
 function renderBodyStyles() {
@@ -341,7 +384,7 @@ function renderBodyStyles() {
       ? "border-orange-400 bg-orange-500/20 text-white"
       : "border-[#2A2A2E] bg-[#2A2A2E] text-gray-300 hover:bg-[#333]";
     return '<button type="button" data-body="' + code + '" class="flex items-center gap-1.5 rounded border px-2 py-1.5 text-xs transition ' + cls + '">' +
-      '<img src="/body_styles/' + code + '.PNG" alt="' + code + '" class="h-[72px] w-[72px] shrink-0 object-contain" onerror="this.style.display=\'none\'" />' +
+      '<img src="../body_styles/' + code + '.PNG" alt="' + code + '" class="h-[72px] w-[72px] shrink-0 object-contain" onerror="this.style.display=\'none\'" />' +
       '<span>' + code + '</span>' +
     '</button>';
   }).join("");
@@ -457,14 +500,24 @@ function renderResolvedPartNumbers() {
   const family       = getBodyFamily(state.bodyStyle);
   const cartridgePN  = resolveCartridgePN(family, state.cartridge);
   const charge       = getChargeLetter(state.refrigerant);
-  const powerheadPN  = resolvePowerheadPN(state.powerElement, state.refrigerant, charge, state.temperature);
+  const powerheadPNs = resolvePowerheadPNs(state.powerElement, state.refrigerant, charge, state.temperature);
 
   $resolvedBody.textContent      = bodyPN      || "\u2014";
   $resolvedBody.className        = bodyPN      ? "text-white" : "text-gray-600";
   $resolvedCartridge.textContent  = cartridgePN || "\u2014";
   $resolvedCartridge.className    = cartridgePN ? "text-white" : "text-gray-600";
-  $resolvedPowerhead.textContent  = powerheadPN || "\u2014";
-  $resolvedPowerhead.className    = powerheadPN ? "text-white" : "text-gray-600";
+
+  if (powerheadPNs.length) {
+    $resolvedPowerhead.innerHTML = powerheadPNs.map(p => {
+      let line = p.partNumber;
+      if (p.mop != null) line += ' <span class="text-[10px] text-gray-400">(MOP ' + p.mop + ')</span>';
+      return line;
+    }).join("<br>");
+    $resolvedPowerhead.className = "text-white";
+  } else {
+    $resolvedPowerhead.textContent = "\u2014";
+    $resolvedPowerhead.className   = "text-gray-600";
+  }
 }
 
 function renderSubmitBtn() {
@@ -490,17 +543,31 @@ function renderAll() {
 
 // ─── Validation: keep selections valid ───
 
+function applyInletOutletDefaults() {
+  if (state.temperature === "air_conditioning") {
+    if (state.inletSize === "3/8") state.inletSize = "";
+    if (state.outletSize === "1/2") state.outletSize = "";
+  } else if (!state.inletSize && !state.outletSize) {
+    state.inletSize = "3/8";
+    state.outletSize = "1/2";
+  }
+}
+
 function validateInletOutlet() {
   if (state.inletSize) {
     const available = getAvailableInletSizes(state.bodyStyle);
-    if (!available.includes(state.inletSize)) {
+    if (available.length > 0 && !available.includes(state.inletSize)) {
       state.inletSize = "";
       state.outletSize = "";
     }
   }
-  if (state.outletSize) {
-    const available = getAvailableOutletSizes(state.bodyStyle, state.inletSize);
-    if (!available.includes(state.outletSize)) {
+  if (state.inletSize) {
+    const outletAvailable = getAvailableOutletSizes(state.bodyStyle, state.inletSize);
+    if (outletAvailable.length > 0) {
+      if (!state.outletSize || !outletAvailable.includes(state.outletSize)) {
+        state.outletSize = outletAvailable[0];
+      }
+    } else if (state.outletSize) {
       state.outletSize = "";
     }
   }
@@ -525,11 +592,14 @@ renderAll();
 
 $temperature.addEventListener("change", () => {
   state.temperature = $temperature.value;
+  applyInletOutletDefaults();
   renderAll();
 });
 
-$refrigerant.addEventListener("change", () => {
-  state.refrigerant = $refrigerant.value;
+$refrigerantGrid.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-refrigerant]");
+  if (!btn) return;
+  state.refrigerant = btn.dataset.refrigerant;
   validateCartridge();
   renderAll();
 });
@@ -552,6 +622,8 @@ $bodyGrid.addEventListener("click", (e) => {
   state.bodyStyle = btn.dataset.body;
   state.inletSize = "";
   state.outletSize = "";
+  applyInletOutletDefaults();
+  validateInletOutlet();
   validateCartridge();
   renderAll();
 });
@@ -559,6 +631,7 @@ $bodyGrid.addEventListener("click", (e) => {
 $inletSize.addEventListener("change", () => {
   state.inletSize = $inletSize.value;
   state.outletSize = "";
+  validateInletOutlet();
   renderInletOutlet();
   renderResolvedPartNumbers();
 });
@@ -640,11 +713,11 @@ $moreToggle.addEventListener("click", () => {
 $submitBtn.addEventListener("click", () => {
   if (filledCount() < 2) return;
 
-  const family      = getBodyFamily(state.bodyStyle);
-  const charge      = getChargeLetter(state.refrigerant);
-  const bodyPN      = resolveBodyPartNumber(state.bodyStyle, state.inletSize, state.outletSize);
-  const cartridgePN = resolveCartridgePN(family, state.cartridge);
-  const powerheadPN = resolvePowerheadPN(state.powerElement, state.refrigerant, charge, state.temperature);
+  const family       = getBodyFamily(state.bodyStyle);
+  const charge       = getChargeLetter(state.refrigerant);
+  const bodyPN       = resolveBodyPartNumber(state.bodyStyle, state.inletSize, state.outletSize);
+  const cartridgePN  = resolveCartridgePN(family, state.cartridge);
+  const powerheadPNs = resolvePowerheadPNs(state.powerElement, state.refrigerant, charge, state.temperature);
 
   const payload = {
     builder:                "txv",
@@ -660,7 +733,7 @@ $submitBtn.addEventListener("click", () => {
     oem_unit_model:         state.oemUnitModel.trim() || undefined,
     body_part_number:       bodyPN               || undefined,
     cartridge_part_number:  cartridgePN          || undefined,
-    powerhead_part_number:  powerheadPN          || undefined,
+    powerhead_part_number:  (powerheadPNs[0] && powerheadPNs[0].partNumber) || undefined,
   };
 
   console.log("TXV Builder payload:", payload);
@@ -669,10 +742,20 @@ $submitBtn.addEventListener("click", () => {
     .filter(([, v]) => v !== undefined)
     .map(([k, v]) => '<div><span class="text-gray-400">' + k.replace(/_/g, " ") + ':</span> <span class="text-white font-medium">' + v + '</span></div>');
 
+  const phSummary = powerheadPNs.length
+    ? powerheadPNs.map(p => {
+        let s = p.partNumber;
+        if (p.mop != null) s += " (MOP " + p.mop + ")";
+        return s;
+      }).join(", ")
+    : "\u2014";
+
   $resultOutput.innerHTML =
     '<p class="font-semibold text-accent mb-2">Your TXV Configuration</p>' +
     lines.join("") +
-    '<p class="text-gray-400 mt-3 text-xs">Resolved: Body <span class="font-mono text-white">' + (bodyPN || "\u2014") + '</span> · Cartridge <span class="font-mono text-white">' + (cartridgePN || "\u2014") + '</span> · Powerhead <span class="font-mono text-white">' + (powerheadPN || "\u2014") + '</span></p>';
+    '<p class="text-gray-400 mt-3 text-xs">Resolved: Body <span class="font-mono text-white">' + (bodyPN || "\u2014") +
+    '</span> \u00B7 Cartridge <span class="font-mono text-white">' + (cartridgePN || "\u2014") +
+    '</span> \u00B7 Powerhead <span class="font-mono text-white">' + phSummary + '</span></p>';
   $resultOutput.classList.remove("hidden");
   $resultOutput.scrollIntoView({ behavior: "smooth", block: "nearest" });
 });
