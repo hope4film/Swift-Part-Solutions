@@ -515,8 +515,8 @@ export default function TXVBuilder({
   const isPrefilled = (key: keyof TxvBuilderPrefill) => prefill[key] != null && prefill[key] !== "";
 
   const inputBase =
-    "mt-1 w-full rounded border border-[#2A2A2E] bg-[#1A1A1D] px-3 py-1.5 text-sm text-white focus:border-orange-400 focus:outline-none";
-  const inputHighlight = "ring-1 ring-orange-400/60 border-orange-400/50";
+    "mt-1 w-full rounded border border-[#2A2A2E] bg-[#1A1A1D] px-3 py-1.5 text-sm text-white focus:border-[#FE6900] focus:outline-none";
+  const inputHighlight = "ring-1 ring-[#FE6900]/60 border-[#FE6900]/50";
 
   const powerElementLabel = (o: string) => {
     if (o === "KT47") return `${o} (recommended)`;
@@ -528,7 +528,7 @@ export default function TXVBuilder({
 
   return (
     <div className="rounded-lg border border-[#2A2A2E] bg-[#1A1A1D] p-4 text-sm">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-orange-400">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#FE6900]">
         TXV Builder
       </p>
 
@@ -553,7 +553,7 @@ export default function TXVBuilder({
           <span className="text-gray-300">Refrigerant</span>
           <div
             className={`mt-1 rounded border p-2 ${
-              isPrefilled("refrigerant") ? "border-orange-400/50 " + inputHighlight : "border-[#2A2A2E]"
+              isPrefilled("refrigerant") ? "border-[#FE6900]/50 " + inputHighlight : "border-[#2A2A2E]"
             }`}
           >
             {refrigerantGroups.map((group) => (
@@ -572,7 +572,7 @@ export default function TXVBuilder({
                       onClick={() => setRefrigerant(o.refrigerant)}
                       className={`rounded border px-2 py-1 text-xs font-medium transition ${
                         refrigerant === o.refrigerant
-                          ? "border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/30"
+                          ? "border-[#FE6900] bg-[#FE6900] text-white shadow-sm shadow-[#FE6900]/30"
                           : "border-[#2A2A2E] bg-[#2A2A2E] text-gray-300 hover:bg-[#333]"
                       }`}
                     >
@@ -605,7 +605,7 @@ export default function TXVBuilder({
           <span className="text-gray-300">Body style</span>
           <div
             className={`mt-1 flex flex-wrap gap-2 rounded border p-2 ${
-              isPrefilled("body_style") ? "border-orange-400/50 " + inputHighlight : "border-[#2A2A2E]"
+              isPrefilled("body_style") ? "border-[#FE6900]/50 " + inputHighlight : "border-[#2A2A2E]"
             }`}
           >
             {bodyStylesVisible.map((code) => (
@@ -615,7 +615,7 @@ export default function TXVBuilder({
                 onClick={() => setBodyStyle(code)}
                 className={`flex items-center gap-1.5 rounded border px-2 py-1.5 text-xs transition ${
                   bodyStyle === code
-                    ? "border-orange-400 bg-orange-500/20 text-white"
+                    ? "border-[#FE6900] bg-[#FE6900]/20 text-white"
                     : "border-[#2A2A2E] bg-[#2A2A2E] text-gray-300 hover:bg-[#333]"
                 }`}
               >
@@ -707,7 +707,7 @@ export default function TXVBuilder({
                         key={c.code}
                         role="option"
                         aria-selected={cartridge === c.code}
-                        className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#2A2A2E] ${cartridge === c.code ? "bg-orange-500/20" : ""}`}
+                        className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#2A2A2E] ${cartridge === c.code ? "bg-[#FE6900]/20" : ""}`}
                         onMouseDown={(e) => { e.preventDefault(); setCartridge(c.code); setCartridgeDropdownOpen(false); }}
                       >
                         <span
@@ -739,7 +739,7 @@ export default function TXVBuilder({
                 <button
                   type="button"
                   onClick={() => setShowUncommonCartridges((s) => !s)}
-                  className="mt-1 text-[10px] text-orange-400 hover:underline"
+                  className="mt-1 text-[10px] text-[#FE6900] hover:underline"
                 >
                   {showUncommonCartridges ? "− Hide BP15 bypass variants" : "+ Show BP15 bypass variants"}
                 </button>
@@ -769,7 +769,7 @@ export default function TXVBuilder({
           <button
             type="button"
             onClick={() => setShowUncommonPower((s) => !s)}
-            className="mt-0.5 text-[10px] text-orange-400 hover:underline"
+            className="mt-0.5 text-[10px] text-[#FE6900] hover:underline"
           >
             {showUncommonPower ? "− Hide uncommon sizes" : "+ Show uncommon sizes (KT33, KT45, KT63, KT85)"}
           </button>
@@ -777,7 +777,7 @@ export default function TXVBuilder({
 
         {/* Resolved part numbers */}
         <div className="mt-3 rounded border border-[#2A2A2E] bg-[#111113] p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-orange-400">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#FE6900]">
             Resolved Part Numbers
           </p>
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-sm">
@@ -805,7 +805,7 @@ export default function TXVBuilder({
           <button
             type="button"
             onClick={() => setShowMoreSpecs((s) => !s)}
-            className="text-xs text-orange-400 hover:underline"
+            className="text-xs text-[#FE6900] hover:underline"
           >
             {showMoreSpecs ? "− Less" : "+ More specs"}
           </button>
@@ -842,7 +842,7 @@ export default function TXVBuilder({
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="mt-3 w-full rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-3 w-full rounded-lg bg-[#FE6900] px-4 py-2 text-sm font-medium text-white hover:bg-[#E55D00] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {canSubmit ? "Use this configuration" : "Select at least 2: refrigerant, body style, temperature, or tonnage"}
         </button>

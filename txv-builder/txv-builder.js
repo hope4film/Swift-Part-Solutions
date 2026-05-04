@@ -363,7 +363,7 @@ function renderRefrigerant() {
     const buttons = group.options.map(o => {
       const active = state.refrigerant === o.refrigerant;
       const cls = active
-        ? "border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/30"
+        ? "border-[#FE6900] bg-[#FE6900] text-white shadow-sm shadow-[#FE6900]/30"
         : "border-[#2A2A2E] bg-[#2A2A2E] text-gray-300 hover:bg-[#333]";
       return '<button type="button" data-refrigerant="' + o.refrigerant + '" class="rounded border px-2 py-1 text-xs font-medium transition ' + cls + '">' +
         formatRefrigerantName(o.refrigerant) +
@@ -381,7 +381,7 @@ function renderBodyStyles() {
   $bodyGrid.innerHTML = styles.map(code => {
     const active = state.bodyStyle === code;
     const cls = active
-      ? "border-orange-400 bg-orange-500/20 text-white"
+      ? "border-[#FE6900] bg-[#FE6900]/20 text-white"
       : "border-[#2A2A2E] bg-[#2A2A2E] text-gray-300 hover:bg-[#333]";
     return '<button type="button" data-body="' + code + '" class="flex items-center gap-1.5 rounded border px-2 py-1.5 text-xs transition ' + cls + '">' +
       '<img src="../body_styles/' + code + '.PNG" alt="' + code + '" class="h-[72px] w-[72px] shrink-0 object-contain" onerror="this.style.display=\'none\'" />' +
@@ -470,7 +470,7 @@ function renderCartridge() {
 
   $cartridgeList.innerHTML = visible.map(c => {
     const pn = resolveCartridgePN(family, c.code);
-    const activeCls = state.cartridge === c.code ? "bg-orange-500/20" : "";
+    const activeCls = state.cartridge === c.code ? "bg-[#FE6900]/20" : "";
     return '<li role="option" data-cartridge="' + c.code + '" class="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-[#2A2A2E] ' + activeCls + '">' +
       '<span style="' + (COLOR_BG[c.color] || '') + ';width:20px;height:20px;border-radius:4px;display:inline-block;border:1px solid #2A2A2E" title="' + c.color + '"></span>' +
       '<span class="font-medium text-gray-200">' + pn + '</span>' +

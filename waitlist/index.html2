@@ -14,8 +14,8 @@
             shell:   '#1E1E20',
             header:  '#1A1A1D',
             border:  '#2A2A2E',
-            accent:  '#FB923C',
-            'accent-hover': '#F97316',
+            accent:  '#FE6900',
+            'accent-hover': '#E55D00',
           }
         }
       }
@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
   <style>
     html { scroll-behavior: smooth; }
-    .field-focus:focus { outline: none; box-shadow: 0 0 0 2px #FB923C; border-color: #FB923C; }
+    .field-focus:focus { outline: none; box-shadow: 0 0 0 2px #FE6900; border-color: #FE6900; }
   </style>
 
   <!-- TODO: Replace with your Supabase project URL and anon key -->

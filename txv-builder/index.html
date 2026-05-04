@@ -5,6 +5,8 @@
   <title>TXV Builder — Swift Part Solutions</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Free TXV Builder — spec out a Sporlan thermostatic expansion valve by refrigerant, body style, cartridge, and more." />
+  <link rel="icon" type="image/png" href="../assets/SPS%20Logo%20Send.png" />
+  <link rel="apple-touch-icon" href="../assets/SPS%20Logo%20Send.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -14,8 +16,8 @@
             shell:   '#1E1E20',
             header:  '#1A1A1D',
             border:  '#2A2A2E',
-            accent:  '#FB923C',
-            'accent-hover': '#F97316',
+            accent:  '#FE6900',
+            'accent-hover': '#E55D00',
           }
         }
       }
@@ -25,7 +27,7 @@
   <style>
     html { scroll-behavior: smooth; }
     select, input { outline: none; }
-    select:focus, input:focus { box-shadow: 0 0 0 2px #FB923C; border-color: #FB923C; }
+    select:focus, input:focus { box-shadow: 0 0 0 2px #FE6900; border-color: #FE6900; }
   </style>
 </head>
 
@@ -33,8 +35,15 @@
 
   <!-- ─── Header ─── -->
   <header class="bg-header border-b border-border px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
-    <a href="../waitlist/" class="text-base font-semibold tracking-tight hover:text-accent transition-colors">
-      Swift Part Solutions
+    <a href="../waitlist/" class="flex items-center shrink-0 hover:opacity-90 transition-opacity" aria-label="Swift Part Solutions — waitlist">
+      <img
+        src="../assets/SPS%20Alt%20Logo.png"
+        alt="Swift Part Solutions"
+        class="h-8 w-auto sm:h-9 max-w-[min(100%,200px)] object-left object-contain"
+        width="200"
+        height="40"
+        decoding="async"
+      />
     </a>
     <a href="../waitlist/#waitlist" class="bg-accent hover:bg-accent-hover text-black text-sm font-semibold px-4 py-2 rounded transition-colors">
       Get Early Access
