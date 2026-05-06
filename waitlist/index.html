@@ -431,30 +431,45 @@
 
 <section id="founder" class="relative w-full border-y border-white/[0.06] bg-[#151518]/95 py-20 backdrop-blur-sm">
   <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_0%,rgba(254,105,0,0.04)_50%,transparent_100%)] opacity-80" aria-hidden="true"></div>
-  <div class="relative mx-auto max-w-3xl px-4">
+  <div class="relative mx-auto max-w-5xl px-4 pt-12 sm:pt-14 lg:pt-16">
 
-    <h2 class="text-center text-2xl font-bold tracking-tight text-white sm:text-3xl">
-      Why I’m building this
-    </h2>
+    <div class="flex flex-col gap-10 lg:flex-row lg:items-start lg:gap-12 xl:gap-14">
+      <!-- Text first on mobile; second column on lg -->
+      <div class="min-w-0 flex-1 text-lg leading-relaxed text-gray-400 lg:order-2 lg:pt-[calc(280px/3)]">
+        <h2 class="text-center text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-left">
+          Why I’m building this
+        </h2>
+        <div class="mt-6 space-y-6">
+          <p>
+            I’ve spent years behind the counter, and I’ve seen the same frustrations over and over: hold music, dead-end calls, blurry photos, scattered notes, and jobs halted to a stop while someone tries to figure out the right part.
+          </p>
 
-    <div class="mt-10 space-y-6 text-lg leading-relaxed text-gray-400">
-      <p>
-        I’ve spent years behind the counter, and I’ve seen the same frustrations over and over: hold music, dead-end calls, blurry photos, scattered notes, and jobs halted to a stop while someone tries to figure out the right part.
-      </p>
+          <p>
+            SPS is my attempt to give technicians the tool they deserve — something that understands how they work and helps them get "The right part. Right now."
+          </p>
+        </div>
+      </div>
 
-      <p>
-        SPS is my attempt to give technicians the tool they deserve — something that understands how they work and helps them get "The right part. Right now."
-      </p>
-    </div>
-
-    <!-- Signature -->
-    <div class="mt-12 border-t border-white/[0.08] pt-10 text-center">
-      <p class="text-lg font-semibold text-white">
-        Mark-Anthony Jimenez
-      </p>
-      <p class="mt-1 text-sm text-gray-500">
-        Founder, Swift Part Solutions
-      </p>
+      <!-- Portrait below text on mobile; left column on lg -->
+      <figure class="relative mx-auto w-full max-w-[150px] shrink-0 overflow-hidden rounded-2xl border border-white/[0.08] bg-black/20 shadow-2xl shadow-black/50 ring-1 ring-white/[0.05] lg:order-1 lg:mx-0 lg:max-w-[min(100%,280px)] lg:self-start">
+        <img
+          src="../assets/no%20BG%20Founder%20Image%20May%206,%202026,%2009_41_44%20AM%201.jpg"
+          alt="Mark-Anthony Jimenez, founder of Swift Part Solutions"
+          class="aspect-[3/4] w-full object-cover object-[center_15%]"
+          width="520"
+          height="693"
+          loading="lazy"
+          decoding="async"
+        />
+        <figcaption class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent px-2 pb-3 pt-12 text-center sm:px-4 sm:pb-5 sm:pt-16">
+          <p class="text-xs font-semibold tracking-tight text-white drop-shadow-md sm:text-base lg:text-lg">
+            Mark-Anthony Jimenez
+          </p>
+          <p class="mt-0.5 text-[10px] font-medium text-gray-300/95 sm:mt-1 sm:text-xs lg:text-sm">
+            Founder, <br class="sm:hidden" aria-hidden="true" /><span class="inline-block whitespace-nowrap sm:inline sm:whitespace-normal">Swift Part Solutions</span>
+          </p>
+        </figcaption>
+      </figure>
     </div>
 
   </div>
